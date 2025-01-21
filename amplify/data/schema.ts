@@ -14,7 +14,20 @@ const schema = a.schema({
     comments: a.hasMany('Comment', ['ticketId']),
     customer: a.belongsTo('Customer', ['customerId']),
     assignedAgent: a.belongsTo('Agent', ['assignedAgentId']),
-    category: a.string(),
+    category: a.enum(['ACCOUNT', 'BILLING', 'SUPPORT', 'SALES', 'OTHER']),
+  }).authorization(allow => allow.authenticated()),
+
+  Agent: a.model({
+    id: a.id(),
+    name: a.string(),
+    email: a.string(),
+    assignedTickets: a.hasMany('Ticket', ['assignedAgentId']),
+    assignedCategories: a.string().array(),
+    status: a.enum(['AVAILABLE', 'BUSY', 'OFFLINE']),
+    maxConcurrentTickets: a.integer(),
+    supervisorId: a.string(),
+    supervisor: a.belongsTo('Agent', ['supervisorId']),
+    agents: a.hasMany('Agent', ['supervisorId']),
   }).authorization(allow => allow.authenticated()),
 
   Comment: a.model({
@@ -34,14 +47,6 @@ const schema = a.schema({
     company: a.string(),
     tickets: a.hasMany('Ticket', ['customerId'])
   }).authorization(allow => allow.authenticated()),
-
-  Agent: a.model({
-    id: a.id(),
-    name: a.string(),
-    email: a.string(),
-    role: a.enum(['ADMIN', 'AGENT', 'SUPERVISOR']),
-    assignedTickets: a.hasMany('Ticket', ['assignedAgentId'])
-  }).authorization(allow => allow.authenticated())
 });
 
 export default schema;

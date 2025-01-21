@@ -8,6 +8,7 @@ export const auth = defineAuth({
   loginWith: {
     email: true
   },
+  groups: ["ADMIN", "SUPER", "AGENT"],
   multifactor: {
     mode: 'OPTIONAL',
     totp: true

@@ -115,8 +115,9 @@ export default function LandingPage() {
         <Card width="100%" maxWidth="1200px" variation="outlined">
           <Flex justifyContent="center" padding={tokens.space.small}>
             <Button
-              variation="link"
-              onClick={() => router.push("/agent-dashboard")}
+              variation="primary"
+              size="large"
+              onClick={() => router.push('/employee')}
             >
               Employee Access
             </Button>
