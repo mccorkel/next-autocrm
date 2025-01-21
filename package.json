@@ -11,8 +11,8 @@
     "deploy:local": "npx amplify sandbox"
   },
   "dependencies": {
-    "@aws-amplify/backend": "^0.7.0",
-    "@aws-amplify/backend-cli": "^0.7.0",
+    "@aws-amplify/backend": "latest",
+    "@aws-amplify/backend-cli": "latest",
     "@aws-amplify/ui-react": "^6.0.7",
     "aws-amplify": "^6.0.9",
     "aws-cdk-lib": "^2.118.0",
