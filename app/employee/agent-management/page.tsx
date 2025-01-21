@@ -6,7 +6,6 @@ import type { Schema } from "@/amplify/data/resource";
 import {
   Button,
   Card,
-  Collection,
   Flex,
   Heading,
   Table,
@@ -19,24 +18,31 @@ import {
   useTheme,
   SelectField,
   TextField,
+  Alert,
+  Text,
 } from "@aws-amplify/ui-react";
 
 const client = generateClient<Schema>();
 
-type AgentRole = "ADMIN" | "AGENT" | "SUPERVISOR";
-type AgentStatus = "AVAILABLE" | "BUSY" | "OFFLINE";
-
 export default function AgentManagement() {
   const { tokens } = useTheme();
-  const [agents, setAgents] = useState<Array<Schema["Agent"]["type"]>>([]);
+  type AgentStatus = 'AVAILABLE' | 'BUSY' | 'OFFLINE';
+  
+  type AgentType = Schema['Agent']['type'];
+
+  const [agents, setAgents] = useState<AgentType[]>([]);
   const [showAddAgent, setShowAddAgent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
   const [newAgent, setNewAgent] = useState({
     name: "",
     email: "",
-    role: "AGENT" as AgentRole,
     status: "AVAILABLE" as AgentStatus,
     maxConcurrentTickets: 5,
     assignedCategories: [] as string[],
+    supervisorId: "",
   });
 
   useEffect(() => {
@@ -47,34 +53,51 @@ export default function AgentManagement() {
     try {
       const { data } = await client.models.Agent.list();
       setAgents(data);
-    } catch (error) {
-      console.error("Error fetching agents:", error);
+    } catch (err) {
+      setError("Failed to fetch agents");
+      console.error("Error fetching agents:", err);
     }
   }
 
   async function createAgent(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
     try {
       await client.models.Agent.create({
         name: newAgent.name,
         email: newAgent.email,
-        role: newAgent.role as AgentRole,
-        status: newAgent.status as AgentStatus,
+        status: newAgent.status,
         maxConcurrentTickets: newAgent.maxConcurrentTickets,
         assignedCategories: newAgent.assignedCategories,
+        supervisorId: newAgent.supervisorId || '',
       });
+      setSuccess("Agent created successfully");
       setShowAddAgent(false);
       setNewAgent({
         name: "",
         email: "",
-        role: "AGENT" as AgentRole,
         status: "AVAILABLE" as AgentStatus,
         maxConcurrentTickets: 5,
         assignedCategories: [],
+        supervisorId: "",
       });
       fetchAgents();
-    } catch (error) {
-      console.error("Error creating agent:", error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create agent");
+    }
+  }
+
+  async function updateAgentStatus(agentId: string, newStatus: AgentStatus) {
+    try {
+      await client.models.Agent.update({
+        id: agentId,
+        status: newStatus,
+      });
+      fetchAgents();
+    } catch (err) {
+      setError("Failed to update agent status");
     }
   }
 
@@ -90,6 +113,9 @@ export default function AgentManagement() {
             {showAddAgent ? "Cancel" : "Add New Agent"}
           </Button>
         </Flex>
+
+        {error && <Alert variation="error">{error}</Alert>}
+        {success && <Alert variation="success">{success}</Alert>}
 
         {showAddAgent && (
           <Card>
@@ -114,23 +140,14 @@ export default function AgentManagement() {
                   required
                 />
                 <SelectField
-                  label="Role"
-                  value={newAgent.role}
-                  onChange={(e) =>
-                    setNewAgent({ ...newAgent, role: e.target.value as AgentRole })
-                  }
-                >
-                  <option value="AGENT">Agent</option>
-                  <option value="SUPERVISOR">Supervisor</option>
-                </SelectField>
-                <SelectField
-                  label="Initial Status"
+                  label="Status"
                   value={newAgent.status}
                   onChange={(e) =>
                     setNewAgent({ ...newAgent, status: e.target.value as AgentStatus })
                   }
                 >
                   <option value="AVAILABLE">Available</option>
+                  <option value="BUSY">Busy</option>
                   <option value="OFFLINE">Offline</option>
                 </SelectField>
                 <TextField
@@ -144,6 +161,20 @@ export default function AgentManagement() {
                     })
                   }
                 />
+                <SelectField
+                  label="Supervisor"
+                  value={newAgent.supervisorId}
+                  onChange={(e) =>
+                    setNewAgent({ ...newAgent, supervisorId: e.target.value })
+                  }
+                >
+                  <option value="">No Supervisor</option>
+                  {agents.map(agent => (
+                    <option key={agent.id} value={agent.id ?? ''}>
+                      {agent.name}
+                    </option>
+                  ))}
+                </SelectField>
                 <Button type="submit" variation="primary">
                   Create Agent
                 </Button>
@@ -161,10 +192,10 @@ export default function AgentManagement() {
               <TableRow>
                 <TableCell as="th">Name</TableCell>
                 <TableCell as="th">Email</TableCell>
-                <TableCell as="th">Role</TableCell>
                 <TableCell as="th">Status</TableCell>
                 <TableCell as="th">Max Tickets</TableCell>
                 <TableCell as="th">Categories</TableCell>
+                <TableCell as="th">Supervisor</TableCell>
                 <TableCell as="th">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -173,7 +204,6 @@ export default function AgentManagement() {
                 <TableRow key={agent.id}>
                   <TableCell>{agent.name}</TableCell>
                   <TableCell>{agent.email}</TableCell>
-                  <TableCell>{agent.role}</TableCell>
                   <TableCell>
                     <Badge
                       variation={
@@ -192,12 +222,18 @@ export default function AgentManagement() {
                     {agent.assignedCategories?.join(", ") || "None"}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="small"
-                      onClick={() => {/* TODO: Edit agent */}}
+                    {agents.find(a => a.id === agent.supervisorId)?.name || "None"}
+                  </TableCell>
+                  <TableCell>
+                    <SelectField
+                      label="Change Status"
+                      defaultValue={agent.status!}
+                      onChange={(e) => updateAgentStatus(agent.id!, e.target.value as AgentStatus)}
                     >
-                      Edit
-                    </Button>
+                      <option value="AVAILABLE">Available</option>
+                      <option value="BUSY">Busy</option>
+                      <option value="OFFLINE">Offline</option>
+                    </SelectField>
                   </TableCell>
                 </TableRow>
               ))}
@@ -207,4 +243,4 @@ export default function AgentManagement() {
       </Flex>
     </View>
   );
-} 
+}

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from "react";
+import { fetchAuthSession, signUp } from 'aws-amplify/auth';
+import { CognitoIdentityProviderClient, ListUsersCommand } from "@aws-sdk/client-cognito-identity-provider";
 import {
   Button,
   Card,
@@ -12,30 +14,86 @@ import {
   TableHead,
   TableRow,
   TextField,
-  SelectField,
-  View,
-  useTheme,
   Alert,
-} from '@aws-amplify/ui-react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
-import { signUp } from 'aws-amplify/auth';
+  Text,
+  View,
+  useAuthenticator,
+} from "@aws-amplify/ui-react";
 
 export default function UserManagement() {
-  const { tokens } = useTheme();
   const { user } = useAuthenticator((context) => [context.user]);
-  const [showAddUser, setShowAddUser] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
-  const userGroups = user?.signInDetails?.loginId?.split(',') || [];
-  const isAdmin = userGroups.includes('ADMIN');
-  
+  const [loading, setLoading] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({
-    email: '',
-    password: '',
-    name: '',
-    group: 'AGENT'
+    name: "",
+    email: "",
+    password: "",
+    group: "AGENT"
   });
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  async function fetchUsers() {
+    try {
+      setLoading(true);
+      const session = await fetchAuthSession();
+      const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] || [];
+      
+      if (!groups.includes('ADMIN')) {
+        setError("You do not have permission to view users");
+        return;
+      }
+
+      const credentials = session.credentials;
+      if (!credentials) {
+        throw new Error("No credentials available");
+      }
+
+      const client = new CognitoIdentityProviderClient({
+        credentials: {
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey,
+          sessionToken: credentials.sessionToken
+        },
+        region: process.env.NEXT_PUBLIC_AWS_REGION
+      });
+
+      const command = new ListUsersCommand({
+        UserPoolId: process.env.NEXT_PUBLIC_AWS_USER_POOL_ID
+      });
+
+      const response = await client.send(command);
+      const cognitoUsers = response.Users || [];
+
+      const formattedUsers = cognitoUsers.map(user => {
+        const attributes = user.Attributes || [];
+        const email = attributes.find(attr => attr.Name === 'email')?.Value || '';
+        const name = attributes.find(attr => attr.Name === 'name')?.Value || '';
+
+        return {
+          username: user.Username,
+          email: email,
+          name: name,
+          enabled: user.Enabled,
+          status: user.UserStatus,
+          groups: [] // We'll need a separate call to get groups
+        };
+      });
+
+      setUsers(formattedUsers);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setError("Failed to fetch users. Please ensure you have the necessary permissions.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
@@ -43,43 +101,51 @@ export default function UserManagement() {
     setSuccess(null);
 
     try {
+      const session = await fetchAuthSession();
+      const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] || [];
+      
+      if (!groups.includes('ADMIN')) {
+        setError("You do not have permission to create users");
+        return;
+      }
+
       await signUp({
         username: newUser.email,
         password: newUser.password,
         options: {
           userAttributes: {
-            email: newUser.email,
             name: newUser.name,
-          },
-          autoSignIn: false
+            email: newUser.email
+          }
         }
       });
 
-      // TODO: Add user to group using Admin API
-      
-      setSuccess('User created successfully!');
+      setSuccess("User created successfully");
       setShowAddUser(false);
       setNewUser({
-        email: '',
-        password: '',
-        name: '',
-        group: 'AGENT'
+        name: "",
+        email: "",
+        password: "",
+        group: "AGENT"
       });
+      fetchUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error("Error creating user:", err);
+      setError(err instanceof Error ? err.message : "Failed to create user");
     }
   }
 
+  if (loading) {
+    return <Text>Loading...</Text>;
+  }
+
   return (
-    <View padding={tokens.space.large}>
-      <Flex direction="column" gap={tokens.space.large}>
+    <View padding="1rem">
+      <Flex direction="column" gap="1rem">
         <Flex justifyContent="space-between" alignItems="center">
-          <Heading level={1}>User Management</Heading>
-          <Button
-            variation="primary"
-            onClick={() => setShowAddUser(!showAddUser)}
-          >
-            {showAddUser ? 'Cancel' : 'Add New User'}
+          <Heading level={2}>User Management</Heading>
+          <Button onClick={() => setShowAddUser(!showAddUser)}>
+            {showAddUser ? "Cancel" : "Add User"}
           </Button>
         </Flex>
 
@@ -98,75 +164,53 @@ export default function UserManagement() {
         {showAddUser && (
           <Card>
             <form onSubmit={createUser}>
-              <Flex direction="column" gap={tokens.space.medium}>
-                <Heading level={3}>Add New User</Heading>
+              <Flex direction="column" gap="1rem">
                 <TextField
                   label="Name"
                   value={newUser.name}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, name: e.target.value })
-                  }
+                  onChange={e => setNewUser({ ...newUser, name: e.target.value })}
                   required
                 />
                 <TextField
                   label="Email"
                   type="email"
                   value={newUser.email}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, email: e.target.value })
-                  }
+                  onChange={e => setNewUser({ ...newUser, email: e.target.value })}
                   required
                 />
                 <TextField
                   label="Password"
                   type="password"
                   value={newUser.password}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, password: e.target.value })
-                  }
+                  onChange={e => setNewUser({ ...newUser, password: e.target.value })}
                   required
                 />
-                <SelectField
-                  label="Group"
-                  value={newUser.group}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, group: e.target.value })
-                  }
-                >
-                  <option value="AGENT">Agent</option>
-                  {isAdmin && (
-                    <>
-                      <option value="SUPER">Supervisor</option>
-                      <option value="ADMIN">Admin</option>
-                    </>
-                  )}
-                </SelectField>
-                <Button type="submit" variation="primary">
-                  Create User
-                </Button>
+                <Button type="submit">Create User</Button>
               </Flex>
             </form>
           </Card>
         )}
 
-        <Card>
-          <Table
-            caption="Users"
-            highlightOnHover={true}
-          >
-            <TableHead>
-              <TableRow>
-                <TableCell as="th">Name</TableCell>
-                <TableCell as="th">Email</TableCell>
-                <TableCell as="th">Group</TableCell>
-                <TableCell as="th">Actions</TableCell>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Username</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Groups</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {users.map((user, index) => (
+              <TableRow key={index}>
+                <TableCell>{user.username}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>{user.enabled ? "Active" : "Disabled"}</TableCell>
+                <TableCell>{user.groups?.join(", ")}</TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {/* TODO: List users and their groups */}
-            </TableBody>
-          </Table>
-        </Card>
+            ))}
+          </TableBody>
+        </Table>
       </Flex>
     </View>
   );
