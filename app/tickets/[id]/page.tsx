@@ -14,41 +14,56 @@ import {
   TextAreaField,
   Badge,
 } from "@aws-amplify/ui-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
 Amplify.configure(outputs);
 const client = generateClient<Schema>();
 
-export default function TicketDetail({ params }: { params: { id: string } }) {
-  const [ticket, setTicket] = useState<Schema["Ticket"]["type"] | null>(null);
-  const [comments, setComments] = useState<Schema["Comment"]["type"][]>([]);
+type TicketType = Schema['Ticket']['type'];
+type CommentType = Schema['Comment']['type'];
+
+export default function TicketDetail() {
+  const params = useParams();
+  const ticketId = typeof params.id === 'string' ? params.id : '';
+  const [ticket, setTicket] = useState<TicketType | null>(null);
+  const [comments, setComments] = useState<CommentType[]>([]);
   const [newComment, setNewComment] = useState("");
   const router = useRouter();
 
   useEffect(() => {
-    fetchTicket();
-    fetchComments();
-  }, [params.id]);
+    if (ticketId) {
+      fetchTicket();
+      fetchComments();
+    }
+  }, [ticketId]);
 
   async function fetchTicket() {
+    if (!ticketId) return;
+    
     try {
       const result = await client.models.Ticket.get({
-        id: params.id
+        id: ticketId
       });
-      setTicket(result);
+      if (result.data) {
+        setTicket(result.data);
+      }
     } catch (error) {
       console.error("Error fetching ticket:", error);
     }
   }
 
   async function fetchComments() {
+    if (!ticketId) return;
+
     try {
       const result = await client.models.Comment.list({
         filter: {
-          ticketId: { eq: params.id }
+          ticketId: { eq: ticketId }
         }
       });
-      setComments(result.data);
+      if (result.data) {
+        setComments(result.data);
+      }
     } catch (error) {
       console.error("Error fetching comments:", error);
     }
@@ -60,7 +75,7 @@ export default function TicketDetail({ params }: { params: { id: string } }) {
     try {
       await client.models.Comment.create({
         content: newComment,
-        ticketId: params.id,
+        ticketId: ticketId,
         authorId: "current-user", // This should be the actual logged-in user's ID
         createdAt: new Date().toISOString(),
       });
@@ -72,7 +87,7 @@ export default function TicketDetail({ params }: { params: { id: string } }) {
   }
 
   if (!ticket) {
-    return <Text>Loading...</Text>;
+    return <div>Loading...</div>;
   }
 
   return (
@@ -81,25 +96,21 @@ export default function TicketDetail({ params }: { params: { id: string } }) {
       
       <Card>
         <Heading level={2}>{ticket.title}</Heading>
-        <Flex gap="1rem">
-          <Badge variation={ticket.status === "OPEN" ? "info" : "success"}>
-            {ticket.status}
-          </Badge>
-          <Badge variation={ticket.priority === "HIGH" ? "error" : "warning"}>
-            {ticket.priority}
-          </Badge>
-        </Flex>
         <Text>{ticket.description}</Text>
+        <Flex gap="0.5rem" marginTop="1rem">
+          <Badge variation="info">{ticket.status}</Badge>
+          <Badge variation="warning">{ticket.priority}</Badge>
+        </Flex>
       </Card>
 
       <Card>
         <Heading level={3}>Comments</Heading>
         <Flex direction="column" gap="1rem">
-          {comments.map((comment) => (
-            <Card key={comment.id} variation="outlined">
+          {comments.map(comment => (
+            <Card key={comment.id}>
               <Text>{comment.content}</Text>
-              <Text as="span" fontSize="small" color="gray">
-                {new Date(comment.createdAt).toLocaleString()}
+              <Text variation="tertiary">
+                {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}
               </Text>
             </Card>
           ))}
