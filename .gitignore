@@ -27,6 +27,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
 
 # vercel
 .vercel
@@ -39,3 +40,13 @@ next-env.d.ts
 .amplify
 amplify_outputs*
 amplifyconfiguration*
+
+# cache
+.elasticache/
+redis-data/
+*.rdb
+
+# CDN
+.cloudfront/
+cdn-config.json
+distribution-config.json
