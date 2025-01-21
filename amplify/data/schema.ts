@@ -11,7 +11,7 @@ const schema = a.schema({
     assignedAgentId: a.string(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
-    comments: a.hasMany('Comment', ['id']),
+    comments: a.hasMany('Comment', ['ticketId']),
     customer: a.belongsTo('Customer', ['customerId']),
     assignedAgent: a.belongsTo('Agent', ['assignedAgentId'])
   }).authorization(allow => allow.authenticated()),
@@ -31,7 +31,7 @@ const schema = a.schema({
     email: a.string(),
     phone: a.string(),
     company: a.string(),
-    tickets: a.hasMany('Ticket', ['id'])
+    tickets: a.hasMany('Ticket', ['customerId'])
   }).authorization(allow => allow.authenticated()),
 
   Agent: a.model({
@@ -39,7 +39,7 @@ const schema = a.schema({
     name: a.string(),
     email: a.string(),
     role: a.enum(['ADMIN', 'AGENT', 'SUPERVISOR']),
-    assignedTickets: a.hasMany('Ticket', ['id'])
+    assignedTickets: a.hasMany('Ticket', ['assignedAgentId'])
   }).authorization(allow => allow.authenticated())
 });
 
