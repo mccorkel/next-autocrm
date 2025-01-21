@@ -13,7 +13,8 @@ const schema = a.schema({
     updatedAt: a.datetime(),
     comments: a.hasMany('Comment', ['ticketId']),
     customer: a.belongsTo('Customer', ['customerId']),
-    assignedAgent: a.belongsTo('Agent', ['assignedAgentId'])
+    assignedAgent: a.belongsTo('Agent', ['assignedAgentId']),
+    category: a.string(),
   }).authorization(allow => allow.authenticated()),
 
   Comment: a.model({
