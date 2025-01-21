@@ -11,7 +11,9 @@ const schema = a.schema({
     assignedAgentId: a.string(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
-    comments: a.hasMany('Comment', 'ticketId'),
+    comments: a.hasMany('Comment', ['id']),
+    customer: a.belongsTo('Customer', ['customerId']),
+    assignedAgent: a.belongsTo('Agent', ['assignedAgentId'])
   }).authorization(allow => allow.authenticated()),
 
   Comment: a.model({
@@ -20,7 +22,7 @@ const schema = a.schema({
     authorId: a.string(),
     ticketId: a.string(),
     createdAt: a.datetime(),
-    ticket: a.belongsTo('Ticket', 'ticketId'),
+    ticket: a.belongsTo('Ticket', ['ticketId'])
   }).authorization(allow => allow.authenticated()),
 
   Customer: a.model({
@@ -29,7 +31,7 @@ const schema = a.schema({
     email: a.string(),
     phone: a.string(),
     company: a.string(),
-    tickets: a.hasMany('Ticket', 'customerId'),
+    tickets: a.hasMany('Ticket', ['id'])
   }).authorization(allow => allow.authenticated()),
 
   Agent: a.model({
@@ -37,7 +39,7 @@ const schema = a.schema({
     name: a.string(),
     email: a.string(),
     role: a.enum(['ADMIN', 'AGENT', 'SUPERVISOR']),
-    assignedTickets: a.hasMany('Ticket', 'assignedAgentId'),
+    assignedTickets: a.hasMany('Ticket', ['id'])
   }).authorization(allow => allow.authenticated())
 });
 
