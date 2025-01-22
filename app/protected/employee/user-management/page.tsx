@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { useState, useEffect } from "react";
 import { fetchAuthSession, signUp } from 'aws-amplify/auth';
 import { CognitoIdentityProviderClient, ListUsersCommand } from "@aws-sdk/client-cognito-identity-provider";
@@ -18,10 +19,12 @@ import {
   Text,
   View,
   useAuthenticator,
+  useTheme,
 } from "@aws-amplify/ui-react";
 
-export default function UserManagement() {
+export default function Page() {
   const { user } = useAuthenticator((context) => [context.user]);
+  const { tokens } = useTheme();
   const [users, setUsers] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -136,14 +139,26 @@ export default function UserManagement() {
   }
 
   if (loading) {
-    return <Text>Loading...</Text>;
+    return (
+      <View 
+        padding={tokens.space.large}
+        backgroundColor={tokens.colors.background.primary}
+        height="100%"
+      >
+        <Text>Loading...</Text>
+      </View>
+    );
   }
 
   return (
-    <View padding="1rem">
-      <Flex direction="column" gap="1rem">
+    <View 
+      padding={tokens.space.large}
+      backgroundColor={tokens.colors.background.primary}
+      height="100%"
+    >
+      <Flex direction="column" gap={tokens.space.medium}>
         <Flex justifyContent="space-between" alignItems="center">
-          <Heading level={2}>User Management</Heading>
+          <Heading level={2} color={tokens.colors.font.primary}>User Management</Heading>
           <Button onClick={() => setShowAddUser(!showAddUser)}>
             {showAddUser ? "Cancel" : "Add User"}
           </Button>
@@ -162,9 +177,13 @@ export default function UserManagement() {
         )}
 
         {showAddUser && (
-          <Card>
+          <Card 
+            backgroundColor={tokens.colors.background.secondary}
+            borderRadius="medium"
+            padding={tokens.space.large}
+          >
             <form onSubmit={createUser}>
-              <Flex direction="column" gap="1rem">
+              <Flex direction="column" gap={tokens.space.medium}>
                 <TextField
                   label="Name"
                   value={newUser.name}
@@ -185,32 +204,38 @@ export default function UserManagement() {
                   onChange={e => setNewUser({ ...newUser, password: e.target.value })}
                   required
                 />
-                <Button type="submit">Create User</Button>
+                <Button type="submit" variation="primary">Create User</Button>
               </Flex>
             </form>
           </Card>
         )}
 
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Username</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Groups</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user, index) => (
-              <TableRow key={index}>
-                <TableCell>{user.username}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.enabled ? "Active" : "Disabled"}</TableCell>
-                <TableCell>{user.groups?.join(", ")}</TableCell>
+        <Card 
+          backgroundColor={tokens.colors.background.secondary}
+          borderRadius="medium"
+          padding={tokens.space.large}
+        >
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell as="th">Username</TableCell>
+                <TableCell as="th">Email</TableCell>
+                <TableCell as="th">Status</TableCell>
+                <TableCell as="th">Groups</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {users.map((user, index) => (
+                <TableRow key={index}>
+                  <TableCell>{user.username}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.enabled ? "Active" : "Disabled"}</TableCell>
+                  <TableCell>{user.groups?.join(", ")}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       </Flex>
     </View>
   );

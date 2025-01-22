@@ -1,12 +1,13 @@
 "use client";
 
+import React from 'react';
 import Navigation from '@/app/components/Navigation';
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import { Flex } from '@aws-amplify/ui-react';
+import { Flex, View } from '@aws-amplify/ui-react';
 import { useEffect, useState } from 'react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
-export default function EmployeeLayout({
+export default function Layout({
   children,
 }: {
   children: React.ReactNode;
@@ -34,9 +35,13 @@ export default function EmployeeLayout({
   return (
     <Flex direction="column" flex="1">
       <Navigation userGroups={userGroups} />
-      <main className="flex-1 p-4">
+      <View 
+        as="main" 
+        className="flex-1 p-4"
+        backgroundColor="background.primary"
+      >
         {children}
-      </main>
+      </View>
     </Flex>
   );
 } 

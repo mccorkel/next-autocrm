@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { generateClient } from "aws-amplify/api";
+import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {
   Button,
@@ -24,7 +24,7 @@ import {
 
 const client = generateClient<Schema>();
 
-export default function AgentManagement() {
+export default function Page() {
   const { tokens } = useTheme();
   type AgentStatus = 'AVAILABLE' | 'BUSY' | 'OFFLINE';
   
@@ -102,10 +102,14 @@ export default function AgentManagement() {
   }
 
   return (
-    <View padding={tokens.space.large}>
+    <View 
+      padding={tokens.space.large}
+      backgroundColor={tokens.colors.background.primary}
+      height="100%"
+    >
       <Flex direction="column" gap={tokens.space.large}>
         <Flex justifyContent="space-between" alignItems="center">
-          <Heading level={1}>Agent Management</Heading>
+          <Heading level={1} color={tokens.colors.font.primary}>Agent Management</Heading>
           <Button
             variation="primary"
             onClick={() => setShowAddAgent(!showAddAgent)}
@@ -118,10 +122,14 @@ export default function AgentManagement() {
         {success && <Alert variation="success">{success}</Alert>}
 
         {showAddAgent && (
-          <Card>
+          <Card 
+            backgroundColor={tokens.colors.background.secondary}
+            borderRadius="medium"
+            padding={tokens.space.large}
+          >
             <form onSubmit={createAgent}>
               <Flex direction="column" gap={tokens.space.medium}>
-                <Heading level={3}>Add New Agent</Heading>
+                <Heading level={3} color={tokens.colors.font.primary}>Add New Agent</Heading>
                 <TextField
                   label="Name"
                   value={newAgent.name}
@@ -183,7 +191,11 @@ export default function AgentManagement() {
           </Card>
         )}
 
-        <Card>
+        <Card 
+          backgroundColor={tokens.colors.background.secondary}
+          borderRadius="medium"
+          padding={tokens.space.large}
+        >
           <Table
             caption="Agents"
             highlightOnHover={true}

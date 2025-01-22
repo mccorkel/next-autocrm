@@ -39,16 +39,6 @@ export const theme: Theme = {
           color: { value: '{colors.font.interactive}' }
         }
       },
-      table: {
-        borderColor: { value: '{colors.border.primary}' },
-        head: {
-          backgroundColor: { value: '{colors.background.primary}' },
-          color: { value: '{colors.font.primary}' }
-        },
-        body: {
-          color: { value: '{colors.font.primary}' }
-        }
-      },
       field: {
         label: {
           color: { value: '{colors.font.primary}' }
