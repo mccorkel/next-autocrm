@@ -75,7 +75,11 @@ export default function ContactPage() {
   }
 
   return (
-    <View padding={tokens.space.large}>
+    <View 
+      padding={tokens.space.large}
+      backgroundColor={tokens.colors.background.primary}
+      minHeight="100vh"
+    >
       <Flex direction="column" alignItems="center" gap={tokens.space.large}>
         <Card width="100%" maxWidth="800px">
           <Flex direction="column" gap={tokens.space.medium}>

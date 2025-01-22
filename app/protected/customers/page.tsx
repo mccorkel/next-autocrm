@@ -16,6 +16,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  tokens,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 
@@ -61,7 +62,13 @@ export default function CustomerManagement() {
   }
 
   return (
-    <Flex direction="column" padding="1rem" gap="2rem">
+    <Flex 
+      direction="column" 
+      padding="1rem" 
+      gap="2rem"
+      backgroundColor={tokens.colors.background.primary}
+      minHeight="100vh"
+    >
       <Flex justifyContent="space-between" alignItems="center">
         <Heading level={1}>Customer Management</Heading>
         <Button onClick={() => router.push("/protected/employee/agent-dashboard")}>Back to Dashboard</Button>

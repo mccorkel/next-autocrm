@@ -102,11 +102,7 @@ export default function Page() {
   }
 
   return (
-    <View 
-      padding={tokens.space.large}
-      backgroundColor={tokens.colors.background.primary}
-      height="100%"
-    >
+    <View backgroundColor={tokens.colors.background.primary} minHeight="100vh">
       <Flex direction="column" gap={tokens.space.large}>
         <Flex justifyContent="space-between" alignItems="center">
           <Heading level={1} color={tokens.colors.font.primary}>Agent Management</Heading>

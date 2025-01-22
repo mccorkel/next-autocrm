@@ -143,7 +143,7 @@ export default function Page() {
       <View 
         padding={tokens.space.large}
         backgroundColor={tokens.colors.background.primary}
-        height="100%"
+        minHeight="100vh"
       >
         <Text>Loading...</Text>
       </View>
@@ -154,7 +154,7 @@ export default function Page() {
     <View 
       padding={tokens.space.large}
       backgroundColor={tokens.colors.background.primary}
-      height="100%"
+      minHeight="100vh"
     >
       <Flex direction="column" gap={tokens.space.medium}>
         <Flex justifyContent="space-between" alignItems="center">
