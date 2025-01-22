@@ -16,7 +16,7 @@ import {
   TableHead,
   TableRow,
   TextField,
-  tokens,
+  useTheme,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 
@@ -24,6 +24,7 @@ Amplify.configure(outputs);
 const client = generateClient<Schema>();
 
 export default function CustomerManagement() {
+  const { tokens } = useTheme();
   const [customers, setCustomers] = useState<Array<Schema["Customer"]["type"]>>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -64,8 +65,8 @@ export default function CustomerManagement() {
   return (
     <Flex 
       direction="column" 
-      padding="1rem" 
-      gap="2rem"
+      padding={tokens.space.large}
+      gap={tokens.space.large}
       backgroundColor={tokens.colors.background.primary}
       minHeight="100vh"
     >
