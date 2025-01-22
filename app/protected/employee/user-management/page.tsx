@@ -4,6 +4,7 @@ import React from 'react';
 import { useState, useEffect } from "react";
 import { fetchAuthSession, signUp } from 'aws-amplify/auth';
 import { CognitoIdentityProviderClient, ListUsersCommand, AdminListGroupsForUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import outputs from "@/amplify_outputs.json";
 import {
   Button,
   Card,
@@ -59,6 +60,12 @@ export default function Page() {
         throw new Error("No credentials available");
       }
 
+      const userPoolId = outputs.auth.user_pool_id;
+      if (!userPoolId) {
+        setError("System configuration error: User Pool ID is not configured. Please contact your administrator.");
+        return;
+      }
+
       const client = new CognitoIdentityProviderClient({
         credentials: {
           accessKeyId: credentials.accessKeyId,
@@ -69,7 +76,7 @@ export default function Page() {
       });
 
       const command = new ListUsersCommand({
-        UserPoolId: process.env.NEXT_PUBLIC_AWS_USER_POOL_ID
+        UserPoolId: userPoolId
       });
 
       const response = await client.send(command);
@@ -83,7 +90,7 @@ export default function Page() {
 
         // Get user's groups
         const listGroupsCommand = new AdminListGroupsForUserCommand({
-          UserPoolId: process.env.NEXT_PUBLIC_AWS_USER_POOL_ID,
+          UserPoolId: outputs.auth.user_pool_id,
           Username: user.Username || '',
         });
         
