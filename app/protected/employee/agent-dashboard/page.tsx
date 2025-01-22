@@ -146,7 +146,7 @@ export default function AgentDashboard() {
                   <TableCell>
                     <Button
                       size="small"
-                      onClick={() => router.push(`/tickets/${ticket.id}`)}
+                      onClick={() => router.push(`/protected/tickets/${ticket.id}`)}
                     >
                       View Details
                     </Button>
