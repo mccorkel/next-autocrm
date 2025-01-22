@@ -63,7 +63,7 @@ export default function Page() {
           secretAccessKey: credentials.secretAccessKey,
           sessionToken: credentials.sessionToken
         },
-        region: process.env.NEXT_PUBLIC_AWS_REGION
+        region: 'us-west-2'
       });
 
       const command = new ListUsersCommand({
