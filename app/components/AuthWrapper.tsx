@@ -11,7 +11,7 @@ Amplify.configure(outputs);
 export default function AuthWrapper({ children }: PropsWithChildren) {
   return (
     <Flex direction="column" minHeight="100vh">
-      <Alert variation="info" isDismissible={false} hasIcon={true}>
+      <Alert variation="info" isDismissible={true} hasIcon={true}>
         Login Information:
         <br />
         Admin: admin@example.com / Admin12345!
