@@ -3,7 +3,7 @@
 import React from 'react';
 import { useState, useEffect } from "react";
 import { fetchAuthSession, signUp } from 'aws-amplify/auth';
-import { CognitoIdentityProviderClient, ListUsersCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { CognitoIdentityProviderClient, ListUsersCommand, AdminListGroupsForUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 import {
   Button,
   Card,
@@ -20,6 +20,8 @@ import {
   View,
   useAuthenticator,
   useTheme,
+  Badge,
+  SelectField,
 } from "@aws-amplify/ui-react";
 
 export default function Page() {
@@ -73,20 +75,42 @@ export default function Page() {
       const response = await client.send(command);
       const cognitoUsers = response.Users || [];
 
-      const formattedUsers = cognitoUsers.map(user => {
+      // Fetch groups for each user
+      const formattedUsers = await Promise.all(cognitoUsers.map(async user => {
         const attributes = user.Attributes || [];
         const email = attributes.find(attr => attr.Name === 'email')?.Value || '';
         const name = attributes.find(attr => attr.Name === 'name')?.Value || '';
 
-        return {
-          username: user.Username,
-          email: email,
-          name: name,
-          enabled: user.Enabled,
-          status: user.UserStatus,
-          groups: [] // We'll need a separate call to get groups
-        };
-      });
+        // Get user's groups
+        const listGroupsCommand = new AdminListGroupsForUserCommand({
+          UserPoolId: process.env.NEXT_PUBLIC_AWS_USER_POOL_ID,
+          Username: user.Username || '',
+        });
+        
+        try {
+          const groupsResponse = await client.send(listGroupsCommand);
+          const groups = groupsResponse.Groups?.map(group => group.GroupName) || [];
+
+          return {
+            username: user.Username,
+            email: email,
+            name: name,
+            enabled: user.Enabled,
+            status: user.UserStatus,
+            groups: groups
+          };
+        } catch (err) {
+          console.error("Error fetching groups for user:", err);
+          return {
+            username: user.Username,
+            email: email,
+            name: name,
+            enabled: user.Enabled,
+            status: user.UserStatus,
+            groups: []
+          };
+        }
+      }));
 
       setUsers(formattedUsers);
       setError(null);
@@ -204,33 +228,67 @@ export default function Page() {
                   onChange={e => setNewUser({ ...newUser, password: e.target.value })}
                   required
                 />
+                <SelectField
+                  label="Group"
+                  value={newUser.group}
+                  onChange={e => setNewUser({ ...newUser, group: e.target.value })}
+                >
+                  <option value="AGENT">Agent</option>
+                  <option value="SUPER">Supervisor</option>
+                  <option value="ADMIN">Admin</option>
+                </SelectField>
                 <Button type="submit" variation="primary">Create User</Button>
               </Flex>
             </form>
           </Card>
         )}
 
-        <Card 
-          backgroundColor={tokens.colors.background.secondary}
-          borderRadius="medium"
-          padding={tokens.space.large}
-        >
-          <Table>
+        <Card>
+          <Table highlightOnHover={true}>
             <TableHead>
               <TableRow>
-                <TableCell as="th">Username</TableCell>
+                <TableCell as="th">Name</TableCell>
                 <TableCell as="th">Email</TableCell>
                 <TableCell as="th">Status</TableCell>
                 <TableCell as="th">Groups</TableCell>
+                <TableCell as="th">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.map((user, index) => (
-                <TableRow key={index}>
-                  <TableCell>{user.username}</TableCell>
+              {users.map((user) => (
+                <TableRow key={user.username}>
+                  <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.enabled ? "Active" : "Disabled"}</TableCell>
-                  <TableCell>{user.groups?.join(", ")}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variation={user.enabled ? "success" : "error"}
+                    >
+                      {user.enabled ? "Active" : "Disabled"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Flex gap={tokens.space.xs}>
+                      {user.groups.map((group: string, index: number) => (
+                        <Badge
+                          key={index}
+                          variation={
+                            group === "ADMIN" ? "error" :
+                            group === "SUPER" ? "warning" : "info"
+                          }
+                        >
+                          {group}
+                        </Badge>
+                      ))}
+                    </Flex>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      size="small"
+                      onClick={() => {/* TODO: Add edit functionality */}}
+                    >
+                      Edit
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
