@@ -1,14 +1,13 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./app.css";
-import AuthWrapper from "./components/AuthWrapper";
+"use client";
 
-const inter = Inter({ subsets: ["latin"] });
+import { Amplify } from "aws-amplify";
+import { ThemeProvider, View } from '@aws-amplify/ui-react';
+import outputs from "@/amplify_outputs.json";
+import "@aws-amplify/ui-react/styles.css";
+import "./globals.css";
+import { theme } from './theme';
 
-export const metadata: Metadata = {
-  title: "AutoCRM",
-  description: "Customer Relationship Management System",
-};
+Amplify.configure(outputs);
 
 export default function RootLayout({
   children,
@@ -17,8 +16,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <AuthWrapper>{children}</AuthWrapper>
+      <body>
+        <ThemeProvider theme={theme}>
+          <View
+            width="100%"
+            height="100vh"
+            backgroundColor="#F0F8FF"
+          >
+            {children}
+          </View>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -11,10 +11,19 @@ export default function Navigation({ userGroups }: { userGroups: string[] }) {
   const isSuper = userGroups.includes('SUPER');
 
   return (
-    <Flex direction="row" gap="1rem" padding="1rem" backgroundColor="white">
+    <Flex 
+      direction="row" 
+      gap="1rem" 
+      padding="1rem" 
+      backgroundColor="white"
+      style={{
+        borderBottom: '1px solid black',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}
+    >
       <Button
-        variation={pathname === '/employee/agent-dashboard' ? 'primary' : 'link'}
-        onClick={() => router.push('/employee/agent-dashboard')}
+        variation={pathname === '/protected/employee/agent-dashboard' ? 'primary' : 'link'}
+        onClick={() => router.push('/protected/employee/agent-dashboard')}
       >
         Ticket Dashboard
       </Button>
@@ -22,14 +31,14 @@ export default function Navigation({ userGroups }: { userGroups: string[] }) {
       {(isAdmin || isSuper) && (
         <>
           <Button
-            variation={pathname === '/employee/agent-management' ? 'primary' : 'link'}
-            onClick={() => router.push('/employee/agent-management')}
+            variation={pathname === '/protected/employee/agent-management' ? 'primary' : 'link'}
+            onClick={() => router.push('/protected/employee/agent-management')}
           >
             Agent Management
           </Button>
           <Button
-            variation={pathname === '/employee/user-management' ? 'primary' : 'link'}
-            onClick={() => router.push('/employee/user-management')}
+            variation={pathname === '/protected/employee/user-management' ? 'primary' : 'link'}
+            onClick={() => router.push('/protected/employee/user-management')}
           >
             User Management
           </Button>

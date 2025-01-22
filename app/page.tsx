@@ -1,8 +1,5 @@
 "use client";
 
-import { Amplify } from "aws-amplify";
-import outputs from "@/amplify_outputs.json";
-import "@aws-amplify/ui-react/styles.css";
 import {
   Button,
   Card,
@@ -16,21 +13,31 @@ import {
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 
-Amplify.configure(outputs);
-
 export default function LandingPage() {
   const router = useRouter();
   const { tokens } = useTheme();
 
   return (
-    <View padding={tokens.space.large}>
+    <View 
+      padding={tokens.space.large}
+      backgroundColor={tokens.colors.background.primary}
+    >
       <Flex direction="column" alignItems="center" gap={tokens.space.large}>
-        <Heading level={1} textAlign="center">
-          How can we help you today?
-        </Heading>
-        <Text textAlign="center" variation="secondary">
-          Choose a category below to find answers to your questions
-        </Text>
+        <Flex direction="column" alignItems="center" gap={tokens.space.small}>
+          <Heading 
+            level={1} 
+            textAlign="center"
+            color={tokens.colors.font.primary}
+          >
+            How can we help you today?
+          </Heading>
+          <Text 
+            textAlign="center" 
+            color={tokens.colors.font.secondary}
+          >
+            Choose a category below to find answers to your questions
+          </Text>
+        </Flex>
 
         <Grid
           templateColumns={{ base: "1fr", medium: "1fr 1fr 1fr" }}
@@ -39,10 +46,15 @@ export default function LandingPage() {
           maxWidth="1200px"
         >
           {/* Technical Support Section */}
-          <Card variation="elevated">
+          <Card 
+            variation="elevated"
+            backgroundColor={tokens.colors.background.secondary}
+            borderRadius="medium"
+            padding={tokens.space.large}
+          >
             <Flex direction="column" gap={tokens.space.medium} height="100%">
-              <Heading level={2}>Technical Support</Heading>
-              <Text>
+              <Heading level={2} color={tokens.colors.font.primary}>Technical Support</Heading>
+              <Text color={tokens.colors.font.secondary}>
                 Get help with technical issues, troubleshooting, and setup guides.
               </Text>
               <Flex justifyContent="flex-end" marginTop="auto">
@@ -57,10 +69,15 @@ export default function LandingPage() {
           </Card>
 
           {/* Billing Section */}
-          <Card variation="elevated">
+          <Card 
+            variation="elevated"
+            backgroundColor={tokens.colors.background.secondary}
+            borderRadius="medium"
+            padding={tokens.space.large}
+          >
             <Flex direction="column" gap={tokens.space.medium} height="100%">
-              <Heading level={2}>Billing</Heading>
-              <Text>
+              <Heading level={2} color={tokens.colors.font.primary}>Billing</Heading>
+              <Text color={tokens.colors.font.secondary}>
                 Find answers about billing, subscriptions, and payment methods.
               </Text>
               <Flex justifyContent="flex-end" marginTop="auto">
@@ -75,10 +92,15 @@ export default function LandingPage() {
           </Card>
 
           {/* Product Questions Section */}
-          <Card variation="elevated">
+          <Card 
+            variation="elevated"
+            backgroundColor={tokens.colors.background.secondary}
+            borderRadius="medium"
+            padding={tokens.space.large}
+          >
             <Flex direction="column" gap={tokens.space.medium} height="100%">
-              <Heading level={2}>Product Questions</Heading>
-              <Text>
+              <Heading level={2} color={tokens.colors.font.primary}>Product Questions</Heading>
+              <Text color={tokens.colors.font.secondary}>
                 Learn more about our products, features, and sales inquiries.
               </Text>
               <Flex justifyContent="flex-end" marginTop="auto">
@@ -93,12 +115,18 @@ export default function LandingPage() {
           </Card>
         </Grid>
 
-        <Divider orientation="horizontal" />
+        <Divider orientation="horizontal" borderColor={tokens.colors.border.primary} />
 
-        <Card width="100%" maxWidth="1200px">
+        <Card 
+          width="100%" 
+          maxWidth="1200px"
+          backgroundColor={tokens.colors.background.secondary}
+          borderRadius="medium"
+          padding={tokens.space.large}
+        >
           <Flex direction="column" alignItems="center" gap={tokens.space.medium}>
-            <Heading level={2}>Still need help?</Heading>
-            <Text textAlign="center">
+            <Heading level={2} color={tokens.colors.font.primary}>Still need help?</Heading>
+            <Text textAlign="center" color={tokens.colors.font.secondary}>
               Our support team is here to assist you if you couldn't find what you're looking for.
             </Text>
             <Button
@@ -112,12 +140,19 @@ export default function LandingPage() {
         </Card>
 
         {/* Employee Access - Smaller and Less Prominent */}
-        <Card width="100%" maxWidth="1200px" variation="outlined">
+        <Card 
+          width="100%" 
+          maxWidth="1200px" 
+          variation="outlined"
+          backgroundColor={tokens.colors.background.secondary}
+          borderRadius="medium"
+          padding={tokens.space.medium}
+        >
           <Flex justifyContent="center" padding={tokens.space.small}>
             <Button
               variation="primary"
               size="large"
-              onClick={() => router.push('/employee')}
+              onClick={() => router.push('/protected/employee')}
             >
               Employee Access
             </Button>

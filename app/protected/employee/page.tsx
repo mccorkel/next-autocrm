@@ -7,7 +7,7 @@ export default function EmployeePage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.push('/employee/agent-dashboard');
+    router.push('/protected/employee/agent-dashboard');
   }, [router]);
 
   return null;

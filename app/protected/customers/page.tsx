@@ -64,7 +64,7 @@ export default function CustomerManagement() {
     <Flex direction="column" padding="1rem" gap="2rem">
       <Flex justifyContent="space-between" alignItems="center">
         <Heading level={1}>Customer Management</Heading>
-        <Button onClick={() => router.push("/")}>Back to Dashboard</Button>
+        <Button onClick={() => router.push("/protected/employee/agent-dashboard")}>Back to Dashboard</Button>
       </Flex>
 
       <Card>
