@@ -64,3 +64,96 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Amplify UI Customization */
+.amplify-authenticator {
+  --amplify-components-authenticator-router-border: none;
+  --amplify-components-authenticator-router-box-shadow: none;
+  --amplify-components-authenticator-router-background-color: transparent;
+  --amplify-components-button-primary-background-color: #2563eb;
+  --amplify-components-fieldcontrol-border-color: #e5e7eb;
+  --amplify-components-fieldcontrol-focus-border-color: #2563eb;
+  width: 100%;
+}
+
+.amplify-authenticator [data-amplify-router] {
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  background-color: transparent;
+  width: 100%;
+}
+
+.amplify-authenticator [data-amplify-form] {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.amplify-authenticator [data-amplify-container] {
+  padding: 0;
+  width: 100%;
+}
+
+.amplify-authenticator [data-amplify-fieldset] {
+  padding: 0;
+  margin: 0;
+  gap: 24px;
+  width: 100%;
+}
+
+.amplify-authenticator [data-amplify-field] {
+  width: 100%;
+}
+
+.amplify-authenticator [data-amplify-field] input {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 16px;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+}
+
+.amplify-authenticator [data-amplify-field] input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+  outline: none;
+}
+
+.amplify-authenticator [data-amplify-footer] {
+  padding: 0;
+  margin-top: 24px;
+  width: 100%;
+}
+
+.amplify-authenticator [data-amplify-button] {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.amplify-authenticator [data-amplify-button]:hover {
+  background-color: #1d4ed8;
+}
+
+.amplify-authenticator [data-amplify-text] {
+  color: #2563eb;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 16px;
+  cursor: pointer;
+}
+
+.amplify-authenticator [data-amplify-text]:hover {
+  text-decoration: underline;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {
@@ -20,6 +20,9 @@ import {
   useTheme,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
+import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
+import { type AuthUser } from '@aws-amplify/auth';
+import { checkAndCreateAgent } from "@/app/utils/agent";
 
 const client = generateClient<Schema>();
 
@@ -30,6 +33,18 @@ export default function AgentDashboard() {
   const { tokens } = useTheme();
   const [tickets, setTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
+  const hasInitialized = useRef(false);
+
+  useEffect(() => {
+    async function initializeAgent() {
+      const agentId = await checkAndCreateAgent();
+      if (agentId) {
+        setCurrentAgentId(agentId);
+      }
+    }
+    initializeAgent();
+  }, []);
 
   useEffect(() => {
     fetchTickets();
@@ -87,31 +102,58 @@ export default function AgentDashboard() {
   }
 
   return (
-    <View 
-      padding={tokens.space.large} 
-      backgroundColor={tokens.colors.background.primary}
-      minHeight="100vh"
+    <Flex 
+      direction="column" 
+      gap={tokens.space.large}
+      width="100%"
+      flex="1"
+      style={{
+        minHeight: 0,
+        display: 'flex'
+      }}
     >
-      <Flex direction="column" gap={tokens.space.large}>
-        <Flex justifyContent="space-between" alignItems="center">
-          <Heading level={1}>Agent Dashboard</Heading>
-          <SelectField
-            label="Filter by Status"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Tickets</option>
-            <option value="OPEN">Open</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="RESOLVED">Resolved</option>
-            <option value="CLOSED">Closed</option>
-          </SelectField>
-        </Flex>
+      <Flex justifyContent="space-between" alignItems="center" width="100%">
+        <Heading level={1}>Agent Dashboard</Heading>
+        <SelectField
+          label="Filter by Status"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">All Tickets</option>
+          <option value="OPEN">Open</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CLOSED">Closed</option>
+        </SelectField>
+      </Flex>
 
-        <Card>
+      <Card
+        padding={tokens.space.medium}
+        borderRadius="medium"
+        backgroundColor={tokens.colors.background.secondary}
+        variation="outlined"
+        width="100%"
+        flex="1"
+        style={{
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <View
+          width="100%"
+          flex="1"
+          style={{
+            overflowX: 'auto',
+            overflowY: 'auto',
+            minHeight: 0
+          }}
+        >
           <Table
             caption="Support Tickets"
             highlightOnHover={true}
+            variation="striped"
+            size="small"
           >
             <TableHead>
               <TableRow>
@@ -155,8 +197,8 @@ export default function AgentDashboard() {
               ))}
             </TableBody>
           </Table>
-        </Card>
-      </Flex>
-    </View>
+        </View>
+      </Card>
+    </Flex>
   );
-} 
+}

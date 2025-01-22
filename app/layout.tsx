@@ -6,6 +6,7 @@ import '@aws-amplify/ui-react/styles.css';
 import { theme } from './theme';
 import outputs from "@/amplify_outputs.json";
 import './globals.css';
+import { AgentProvider } from '@/app/contexts/AgentContext';
 
 Amplify.configure(outputs);
 
@@ -31,7 +32,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ThemeProvider theme={theme}>
-          <AppContent>{children}</AppContent>
+          <AgentProvider>
+            <AppContent>{children}</AppContent>
+          </AgentProvider>
         </ThemeProvider>
       </body>
     </html>

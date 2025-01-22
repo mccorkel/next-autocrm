@@ -20,6 +20,7 @@ import {
   Alert,
   Text,
 } from "@aws-amplify/ui-react";
+import { checkAndCreateAgent } from "@/app/utils/agent";
 
 const client = generateClient<Schema>();
 
@@ -38,7 +39,23 @@ export default function Page() {
   const [currentAgentId, setCurrentAgentId] = useState<string>("");
 
   useEffect(() => {
-    checkUserPermissions();
+    async function initialize() {
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] || [];
+        setCurrentUserGroups(groups);
+        
+        const agentId = await checkAndCreateAgent();
+        if (agentId) {
+          setCurrentAgentId(agentId);
+        }
+      } catch (err) {
+        console.error("Error in initialization:", err);
+        setError("Error setting up agent profile");
+      }
+    }
+    
+    initialize();
   }, []);
 
   useEffect(() => {
@@ -47,117 +64,6 @@ export default function Page() {
       fetchAgents();
     }
   }, [currentAgentId]);
-
-  async function checkUserPermissions() {
-    try {
-      const session = await fetchAuthSession();
-      console.log("Full session data:", JSON.stringify(session.tokens?.accessToken?.payload, null, 2));
-      
-      const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] || [];
-      setCurrentUserGroups(groups);
-      
-      // Get user's actual email and sub (ID)
-      const userId = session.tokens?.accessToken?.payload['sub'] as string;
-      const userEmail = session.tokens?.accessToken?.payload['email'] as string;
-      const userName = session.tokens?.accessToken?.payload['name'] as string;
-      
-      console.log("User authenticated:", {
-        sub: userId,
-        email: userEmail,
-        name: userName,
-        groups: groups
-      });
-
-      // If email is undefined, we should use the sub as a fallback
-      const agentEmail = userEmail || userId;
-      console.log("Using email/identifier for agent:", agentEmail);
-
-      setCurrentUserId(agentEmail);
-
-      console.log("Checking for existing agent with email:", agentEmail);
-      
-      // Try to find existing agent
-      const { data: existingAgents } = await client.models.Agent.list({
-        filter: {
-          email: {
-            eq: agentEmail
-          }
-        }
-      });
-
-      console.log("Existing agents query result:", existingAgents);
-
-      if (existingAgents && existingAgents.length > 0) {
-        const agent = existingAgents[0];
-        console.log("Found existing agent:", agent);
-        if (agent.id) {
-          setCurrentAgentId(agent.id);
-        }
-      } else {
-        console.log("No existing agent found, attempting to create new agent with data:", {
-          email: agentEmail,
-          name: userName || agentEmail,
-          status: "AVAILABLE",
-          maxConcurrentTickets: 5,
-          assignedCategories: [],
-        });
-
-        try {
-          // Create new agent
-          const createResult = await client.models.Agent.create({
-            email: agentEmail,
-            name: userName || agentEmail,
-            status: "AVAILABLE",
-            maxConcurrentTickets: 5,
-            assignedCategories: [],
-          });
-          
-          console.log("Create agent API response:", createResult);
-          
-          if (createResult.errors) {
-            console.error("GraphQL errors during agent creation:", createResult.errors);
-            throw new Error(`Failed to create agent: ${createResult.errors.map(e => e.message).join(', ')}`);
-          }
-
-          if (!createResult.data) {
-            console.error("No data returned from create agent call");
-            throw new Error("Failed to create agent - no data returned");
-          }
-
-          const newAgent = createResult.data;
-          console.log("Created new agent:", newAgent);
-          
-          if (newAgent?.id) {
-            console.log("Setting current agent ID to:", newAgent.id);
-            setCurrentAgentId(newAgent.id);
-          } else {
-            console.error("Created agent has no ID:", newAgent);
-            throw new Error("Created agent has no ID");
-          }
-        } catch (createErr) {
-          console.error("Error creating new agent:", createErr);
-          if (createErr instanceof Error) {
-            console.error("Error details:", {
-              message: createErr.message,
-              stack: createErr.stack,
-              // Add any additional error properties that might be present
-              ...(createErr as any)
-            });
-          }
-          throw createErr; // Re-throw to be caught by outer catch block
-        }
-      }
-    } catch (err) {
-      console.error("Error in checkUserPermissions:", err);
-      if (err instanceof Error) {
-        console.error("Error details:", {
-          message: err.message,
-          stack: err.stack
-        });
-      }
-      setError("Error setting up agent profile");
-    }
-  }
 
   async function fetchAgents() {
     try {

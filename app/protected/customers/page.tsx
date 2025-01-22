@@ -17,6 +17,7 @@ import {
   TableRow,
   TextField,
   useTheme,
+  View,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 
@@ -30,6 +31,7 @@ export default function CustomerManagement() {
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -57,82 +59,93 @@ export default function CustomerManagement() {
       setEmail("");
       setCompany("");
       setPhone("");
+      setShowAddForm(false);
     } catch (error) {
       console.error("Error creating customer:", error);
     }
   }
 
   return (
-    <Flex 
-      direction="column" 
+    <View 
       padding={tokens.space.large}
-      gap={tokens.space.large}
       backgroundColor={tokens.colors.background.primary}
       minHeight="100vh"
     >
-      <Flex justifyContent="space-between" alignItems="center">
-        <Heading level={1}>Customer Management</Heading>
-        <Button onClick={() => router.push("/protected/employee/agent-dashboard")}>Back to Dashboard</Button>
-      </Flex>
+      <Flex direction="column" gap={tokens.space.large}>
+        <Flex justifyContent="space-between" alignItems="center">
+          <Heading level={1}>Customer Management</Heading>
+        </Flex>
 
-      <Card>
-        <form onSubmit={createCustomer}>
-          <Flex direction="column" gap="1rem">
-            <Heading level={3}>Add New Customer</Heading>
-            <TextField
-              label="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            <TextField
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <TextField
-              label="Company"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-            />
-            <TextField
-              label="Phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-            <Button type="submit" variation="primary">
-              Add Customer
-            </Button>
-          </Flex>
-        </form>
-      </Card>
-
-      <Card>
-        <Heading level={2}>Customers</Heading>
-        <Table highlightOnHover={true}>
-          <TableHead>
-            <TableRow>
-              <TableCell as="th">Name</TableCell>
-              <TableCell as="th">Email</TableCell>
-              <TableCell as="th">Company</TableCell>
-              <TableCell as="th">Phone</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {customers.map((customer) => (
-              <TableRow key={customer.id}>
-                <TableCell>{customer.name}</TableCell>
-                <TableCell>{customer.email}</TableCell>
-                <TableCell>{customer.company}</TableCell>
-                <TableCell>{customer.phone}</TableCell>
+        <Card>
+          <Table highlightOnHover={true}>
+            <TableHead>
+              <TableRow>
+                <TableCell as="th">Name</TableCell>
+                <TableCell as="th">Email</TableCell>
+                <TableCell as="th">Company</TableCell>
+                <TableCell as="th">Phone</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
-    </Flex>
+            </TableHead>
+            <TableBody>
+              {customers.map((customer) => (
+                <TableRow key={customer.id}>
+                  <TableCell>{customer.name}</TableCell>
+                  <TableCell>{customer.email}</TableCell>
+                  <TableCell>{customer.company}</TableCell>
+                  <TableCell>{customer.phone}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+
+        <Flex justifyContent="center">
+          <Button
+            variation="primary"
+            size="large"
+            onClick={() => setShowAddForm(!showAddForm)}
+          >
+            {showAddForm ? "Cancel" : "Add New Customer"}
+          </Button>
+        </Flex>
+
+        {showAddForm && (
+          <Card>
+            <Heading level={2} paddingBottom={tokens.space.medium}>Add New Customer</Heading>
+            <form onSubmit={createCustomer}>
+              <Flex direction="column" gap={tokens.space.medium}>
+                <TextField
+                  label="Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+                <TextField
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <TextField
+                  label="Company"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                />
+                <TextField
+                  label="Phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+                <Button type="submit" variation="primary">
+                  Add Customer
+                </Button>
+              </Flex>
+            </form>
+          </Card>
+        )}
+      </Flex>
+    </View>
   );
 }

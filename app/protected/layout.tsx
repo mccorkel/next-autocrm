@@ -1,41 +1,226 @@
 "use client";
 
 import AuthWrapper from "@/app/components/AuthWrapper";
-import { Button, Flex } from "@aws-amplify/ui-react";
+import { Button, Flex, View, useTheme, Loader, Text } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "aws-amplify/auth";
+import { useEffect, useState, useCallback } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import EmployeeTabs from '@/app/components/EmployeeTabs';
+import { Amplify } from 'aws-amplify';
+import outputs from "@/amplify_outputs.json";
+import { AuthUser } from '@aws-amplify/auth';
+
+// Configure Amplify
+console.log("Configuring Amplify with outputs:", outputs);
+Amplify.configure(outputs);
+
+// Loading screen component
+function LoadingScreen() {
+  const { tokens } = useTheme();
+  return (
+    <View width="100vw" height="100vh">
+      <Flex direction="column" alignItems="center" justifyContent="center" height="100%">
+        <Loader size="large" />
+        <Text variation="primary" marginTop={tokens.space.medium}>
+          Initializing application...
+        </Text>
+      </Flex>
+    </View>
+  );
+}
+
+// Separate component for the protected content
+function ProtectedContent({
+  user,
+  signOut: authSignOut,
+  userGroups,
+  isLoading,
+  children
+}: {
+  user: AuthUser | undefined;
+  signOut: (() => void) | undefined;
+  userGroups: string[];
+  isLoading: boolean;
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const { tokens } = useTheme();
+
+  const handleSignOut = () => {
+    if (authSignOut) {
+      authSignOut();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View width="100vw" height="100vh">
+        <Flex direction="column" alignItems="center" justifyContent="center" height="100%">
+          <Loader size="large" />
+          <Text variation="primary" marginTop={tokens.space.medium}>
+            Loading...
+          </Text>
+        </Flex>
+      </View>
+    );
+  }
+
+  return (
+    <View 
+      width="100vw"
+      height="100vh"
+      backgroundColor={tokens.colors.background.primary}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}
+    >
+      {user && userGroups.length > 0 && (
+        <View
+          width="100%"
+          backgroundColor={tokens.colors.background.secondary}
+          style={{ 
+            borderBottom: `1px solid ${tokens.colors.border.primary}`,
+            position: 'sticky',
+            top: 0,
+            zIndex: 10
+          }}
+        >
+          <Flex 
+            width="100%" 
+            padding={tokens.space.medium}
+            justifyContent="space-between"
+            alignItems="center"
+            maxWidth="1400px"
+            margin="0 auto"
+          >
+            <Flex alignItems="center" gap={tokens.space.large}>
+              <Button onClick={() => router.push("/")} variation="link">
+                Home
+              </Button>
+              <EmployeeTabs userGroups={userGroups} />
+            </Flex>
+            <Button onClick={handleSignOut} variation="primary">
+              Sign Out
+            </Button>
+          </Flex>
+        </View>
+      )}
+      <View 
+        flex="1"
+        width="100%"
+        style={{
+          overflowY: 'auto',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <View
+          width="100%"
+          maxWidth="1400px"
+          margin="0 auto"
+          padding={tokens.space.medium}
+          flex="1"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0
+          }}
+        >
+          {children}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// Component to handle auth state and session checking
+function AuthContent({
+  user,
+  signOut,
+  children
+}: {
+  user: AuthUser | undefined;
+  signOut: (() => void) | undefined;
+  children: React.ReactNode;
+}) {
+  const [userGroups, setUserGroups] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const checkSession = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      if (!user) {
+        setUserGroups([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const session = await fetchAuthSession();
+      if (!session.tokens?.accessToken) {
+        setIsLoading(false);
+        return;
+      }
+      
+      const groups = (session.tokens.accessToken.payload['cognito:groups'] as string[]) || [];
+      setUserGroups(groups);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error checking session:', error);
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
+
+  return (
+    <ProtectedContent
+      user={user}
+      signOut={signOut}
+      userGroups={userGroups}
+      isLoading={isLoading}
+      children={children}
+    />
+  );
+}
 
 export default function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.push("/");
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  };
+  // Initialize Amplify
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!isInitialized) {
+    return (
+      <AuthWrapper>
+        {() => <LoadingScreen />}
+      </AuthWrapper>
+    );
+  }
 
   return (
     <AuthWrapper>
-      <Flex direction="column">
-        <Flex
-          as="nav"
-          padding="1rem"
-          backgroundColor="white"
-          justifyContent="space-between"
-          alignItems="center"
-        >
-          <Button onClick={() => router.push("/")}>Home</Button>
-          <Button onClick={handleSignOut}>Sign Out</Button>
-        </Flex>
-        <main style={{ padding: "1rem" }}>{children}</main>
-      </Flex>
+      {({ user, signOut: authSignOut }) => (
+        <AuthContent
+          user={user}
+          signOut={authSignOut}
+          children={children}
+        />
+      )}
     </AuthWrapper>
   );
 } 

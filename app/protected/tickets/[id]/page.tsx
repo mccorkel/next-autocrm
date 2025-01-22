@@ -92,8 +92,6 @@ export default function TicketDetail() {
 
   return (
     <Flex direction="column" padding="1rem" gap="1rem">
-      <Button onClick={() => router.push("/protected/employee/agent-dashboard")}>Back to Dashboard</Button>
-      
       <Card>
         <Heading level={2}>{ticket.title}</Heading>
         <Text>{ticket.description}</Text>
