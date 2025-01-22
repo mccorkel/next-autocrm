@@ -3,7 +3,12 @@
 import React from 'react';
 import { useState, useEffect } from "react";
 import { fetchAuthSession, signUp } from 'aws-amplify/auth';
-import { CognitoIdentityProviderClient, ListUsersCommand, AdminListGroupsForUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { 
+  CognitoIdentityProviderClient, 
+  ListUsersCommand, 
+  AdminListGroupsForUserCommand,
+  AdminAddUserToGroupCommand
+} from "@aws-sdk/client-cognito-identity-provider";
 import outputs from "@/amplify_outputs.json";
 import {
   Button,
@@ -24,8 +29,10 @@ import {
   Badge,
   SelectField,
 } from "@aws-amplify/ui-react";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
+  const router = useRouter();
   const { user } = useAuthenticator((context) => [context.user]);
   const { tokens } = useTheme();
   const [users, setUsers] = useState<any[]>([]);
@@ -39,6 +46,25 @@ export default function Page() {
     password: "",
     group: "AGENT"
   });
+
+  // Check user permissions and redirect if necessary
+  useEffect(() => {
+    async function checkPermissions() {
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] || [];
+        
+        if (!groups.includes('ADMIN')) {
+          router.push('/protected/employee/agent-dashboard');
+        }
+      } catch (err) {
+        console.error("Error checking permissions:", err);
+        router.push('/protected/employee/agent-dashboard');
+      }
+    }
+    
+    checkPermissions();
+  }, [router]);
 
   useEffect(() => {
     fetchUsers();
@@ -143,7 +169,8 @@ export default function Page() {
         return;
       }
 
-      await signUp({
+      // Create the user
+      const signUpResult = await signUp({
         username: newUser.email,
         password: newUser.password,
         options: {
@@ -154,7 +181,34 @@ export default function Page() {
         }
       });
 
-      setSuccess("User created successfully");
+      if (!signUpResult.userId) {
+        throw new Error("Failed to create user - no user ID returned");
+      }
+
+      // Add user to their group
+      const credentials = session.credentials;
+      if (!credentials) {
+        throw new Error("No credentials available");
+      }
+
+      const client = new CognitoIdentityProviderClient({
+        credentials: {
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey,
+          sessionToken: credentials.sessionToken
+        },
+        region: 'us-west-2'
+      });
+
+      const addToGroupCommand = new AdminAddUserToGroupCommand({
+        UserPoolId: outputs.auth.user_pool_id,
+        Username: newUser.email,
+        GroupName: newUser.group
+      });
+
+      await client.send(addToGroupCommand);
+
+      setSuccess("User created successfully and added to group: " + newUser.group);
       setShowAddUser(false);
       setNewUser({
         name: "",

@@ -1,49 +1,51 @@
 "use client";
 
-import { Flex, Button } from '@aws-amplify/ui-react';
-import { useRouter, usePathname } from 'next/navigation';
+import { Flex, Button, useTheme } from '@aws-amplify/ui-react';
+import { useRouter } from 'next/navigation';
 
-export default function Navigation({ userGroups }: { userGroups: string[] }) {
+interface NavigationProps {
+  userGroups: string[];
+}
+
+export default function Navigation({ userGroups }: NavigationProps) {
   const router = useRouter();
-  const pathname = usePathname();
-  
-  const isAdmin = userGroups.includes('ADMIN');
-  const isSuper = userGroups.includes('SUPER');
+  const { tokens } = useTheme();
 
   return (
-    <Flex 
-      direction="row" 
-      gap="1rem" 
-      padding="1rem" 
-      backgroundColor="white"
-      style={{
-        borderBottom: '1px solid black',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}
+    <Flex
+      as="nav"
+      padding={tokens.space.medium}
+      backgroundColor={tokens.colors.background.secondary}
+      gap={tokens.space.small}
     >
       <Button
-        variation={pathname === '/protected/employee/agent-dashboard' ? 'primary' : 'link'}
         onClick={() => router.push('/protected/employee/agent-dashboard')}
+        variation="link"
       >
-        Ticket Dashboard
+        Dashboard
       </Button>
-      
-      {(isAdmin || isSuper) && (
-        <>
-          <Button
-            variation={pathname === '/protected/employee/agent-management' ? 'primary' : 'link'}
-            onClick={() => router.push('/protected/employee/agent-management')}
-          >
-            Agent Management
-          </Button>
-          <Button
-            variation={pathname === '/protected/employee/user-management' ? 'primary' : 'link'}
-            onClick={() => router.push('/protected/employee/user-management')}
-          >
-            User Management
-          </Button>
-        </>
+      {(userGroups.includes('ADMIN') || userGroups.includes('SUPER')) && (
+        <Button
+          onClick={() => router.push('/protected/employee/agent-management')}
+          variation="link"
+        >
+          Agent Management
+        </Button>
       )}
+      {userGroups.includes('ADMIN') && (
+        <Button
+          onClick={() => router.push('/protected/employee/user-management')}
+          variation="link"
+        >
+          User Management
+        </Button>
+      )}
+      <Button
+        onClick={() => router.push('/protected/customers')}
+        variation="link"
+      >
+        Customers
+      </Button>
     </Flex>
   );
 } 
