@@ -12,7 +12,7 @@ export const backend = defineBackend({
       authenticated: {
         policies: [
           {
-            document: (stack: Stack) => configureSES(stack)
+            document: () => configureSES()
           }
         ]
       }
