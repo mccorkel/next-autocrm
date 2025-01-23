@@ -18,6 +18,7 @@ import {
   Badge,
   View,
   useTheme,
+  Text,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
@@ -25,20 +26,24 @@ import { type AuthUser } from '@aws-amplify/auth';
 import { checkAndCreateAgent } from "@/app/utils/agent";
 import { Amplify } from "aws-amplify";
 import { useAgent } from "@/app/contexts/AgentContext";
+import { useLanguage } from "../../../contexts/LanguageContext";
+import { Suspense } from "react";
 
 const client = generateClient<Schema>();
 
 type BadgeVariation = "info" | "warning" | "error" | "success";
 
-export default function AgentDashboard() {
+function AgentDashboardContent() {
   const router = useRouter();
   const { tokens } = useTheme();
   const { currentAgentId, isInitialized: isAgentInitialized, isLoading } = useAgent();
+  const { translations } = useLanguage();
   const [tickets, setTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [agents, setAgents] = useState<Array<Schema["Agent"]["type"]>>([]);
   const [userGroups, setUserGroups] = useState<string[]>([]);
   const [isAmplifyConfigured, setIsAmplifyConfigured] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Wait for Amplify configuration
   useEffect(() => {
@@ -119,6 +124,8 @@ export default function AgentDashboard() {
       setTickets(sortedTickets);
     } catch (error) {
       console.error("Error fetching tickets:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -148,6 +155,18 @@ export default function AgentDashboard() {
       default:
         return "info";
     }
+  }
+
+  if (loading) {
+    return (
+      <View 
+        padding={tokens.space.large}
+        backgroundColor={tokens.colors.background.primary}
+        minHeight="100vh"
+      >
+        <Text>Loading...</Text>
+      </View>
+    );
   }
 
   return (
@@ -348,5 +367,13 @@ export default function AgentDashboard() {
         </View>
       </Card>
     </Flex>
+  );
+}
+
+export default function AgentDashboard() {
+  return (
+    <Suspense>
+      <AgentDashboardContent />
+    </Suspense>
   );
 }

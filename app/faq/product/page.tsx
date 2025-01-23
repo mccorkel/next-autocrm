@@ -13,8 +13,9 @@ import {
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { Suspense } from "react";
 
-export default function ProductFAQPage() {
+function ProductFAQContent() {
   const router = useRouter();
   const { tokens } = useTheme();
   const { translations } = useLanguage();
@@ -58,14 +59,31 @@ export default function ProductFAQPage() {
               {translations.faq.product.needHelp?.description}
             </Text>
             <Flex gap={tokens.space.medium}>
-              <Button onClick={() => router.push('/contact')}>
+              <Button
+                variation="primary"
+                onClick={() => router.push('/contact')}
+              >
                 {translations.faq.product.needHelp?.contactButton}
               </Button>
-              <Link href="mailto:sales@tigerpanda.tv">sales@tigerpanda.tv</Link>
+              <Link
+                href="mailto:sales@tigerpanda.tv"
+                isExternal
+                color={tokens.colors.blue[60]}
+              >
+                sales@tigerpanda.tv
+              </Link>
             </Flex>
           </Flex>
         </Card>
       </Flex>
     </View>
+  );
+}
+
+export default function ProductFAQPage() {
+  return (
+    <Suspense>
+      <ProductFAQContent />
+    </Suspense>
   );
 } 

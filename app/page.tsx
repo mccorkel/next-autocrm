@@ -14,8 +14,9 @@ import {
 import { useRouter } from "next/navigation";
 import { useLanguage } from "./contexts/LanguageContext";
 import { LanguagePicker } from "./components/LanguagePicker";
+import { Suspense } from "react";
 
-export default function LandingPage() {
+function LandingContent() {
   const router = useRouter();
   const { tokens } = useTheme();
   const { translations } = useLanguage();
@@ -175,5 +176,13 @@ export default function LandingPage() {
         </Card>
       </Flex>
     </View>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense>
+      <LandingContent />
+    </Suspense>
   );
 }

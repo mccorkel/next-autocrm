@@ -30,11 +30,22 @@ import {
   SelectField,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/amplify/data/resource";
+import { useLanguage } from "../../../contexts/LanguageContext";
+import { useAgent } from "../../../contexts/AgentContext";
+import { Suspense } from "react";
 
-export default function Page() {
+const client = generateClient<Schema>();
+
+type CustomerType = Schema["Customer"]["type"];
+
+function UserManagementContent() {
   const router = useRouter();
   const { user } = useAuthenticator((context) => [context.user]);
   const { tokens } = useTheme();
+  const { translations } = useLanguage();
+  const { currentAgentId } = useAgent();
   const [users, setUsers] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -357,5 +368,13 @@ export default function Page() {
         </Card>
       </Flex>
     </View>
+  );
+}
+
+export default function UserManagementPage() {
+  return (
+    <Suspense>
+      <UserManagementContent />
+    </Suspense>
   );
 } 

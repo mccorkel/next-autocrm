@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { generateClient } from "aws-amplify/data";
 import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from "@/amplify/data/resource";
@@ -21,33 +21,38 @@ import {
   Text,
 } from "@aws-amplify/ui-react";
 import { checkAndCreateAgent } from "@/app/utils/agent";
+import { useLanguage } from "../../../contexts/LanguageContext";
+import { useAgent } from "../../../contexts/AgentContext";
+import { useRouter } from "next/navigation";
+import { Suspense } from "react";
 
 const client = generateClient<Schema>();
 
-export default function Page() {
-  const { tokens } = useTheme();
-  type AgentStatus = 'AVAILABLE' | 'BUSY' | 'OFFLINE';
-  type AgentType = Schema['Agent']['type'];
+type AgentType = Schema["Agent"]["type"];
 
-  const [agents, setAgents] = useState<AgentType[]>([]);
+function AgentManagementContent() {
+  const router = useRouter();
+  const { tokens } = useTheme();
+  const { translations } = useLanguage();
+  const { currentAgentId, setCurrentAgentId } = useAgent();
   const [assignedAgents, setAssignedAgents] = useState<AgentType[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [currentUserGroups, setCurrentUserGroups] = useState<string[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string>("");
-  const [currentAgentId, setCurrentAgentId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | undefined>();
+  const [success, setSuccess] = useState<string | undefined>();
 
   useEffect(() => {
     async function initialize() {
       try {
         const session = await fetchAuthSession();
         const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] || [];
-        setCurrentUserGroups(groups);
         
-        const agentId = await checkAndCreateAgent();
-        if (agentId) {
-          setCurrentAgentId(agentId);
+        // Only create agent and redirect if we don't have a currentAgentId
+        if (!currentAgentId) {
+          const agentId = await checkAndCreateAgent();
+          if (agentId) {
+            setCurrentAgentId(agentId);
+            router.push('/protected/employee/agent-dashboard');
+          }
         }
       } catch (err) {
         console.error("Error in initialization:", err);
@@ -56,7 +61,7 @@ export default function Page() {
     }
     
     initialize();
-  }, []);
+  }, [router, currentAgentId]);
 
   useEffect(() => {
     if (currentAgentId) {
@@ -66,19 +71,24 @@ export default function Page() {
   }, [currentAgentId]);
 
   async function fetchAgents() {
+    if (!currentAgentId) return;
+
     try {
       setLoading(true);
-      const { data } = await client.models.Agent.list();
-      
-      // Filter assigned agents using currentAgentId instead of email
-      const assigned = data.filter(agent => agent.supervisorId === currentAgentId);
-      setAssignedAgents(assigned);
-      
-      // Set all agents
-      setAgents(data);
-    } catch (err) {
-      setError("Failed to fetch agents");
-      console.error("Error fetching agents:", err);
+      const agentsResponse = await client.models.Agent.list({
+        filter: {
+          supervisorId: {
+            eq: currentAgentId
+          }
+        }
+      });
+
+      if (agentsResponse.data) {
+        setAssignedAgents(agentsResponse.data);
+      }
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+      setError('Failed to load agents. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -165,52 +175,15 @@ export default function Page() {
             </TableBody>
           </Table>
         </Card>
-
-        {/* All Agents Section */}
-        <Card>
-          <Heading level={2} color={tokens.colors.font.primary}>All Agents</Heading>
-          <Table highlightOnHover={true}>
-            <TableHead>
-              <TableRow>
-                <TableCell as="th">Name</TableCell>
-                <TableCell as="th">Email</TableCell>
-                <TableCell as="th">Status</TableCell>
-                <TableCell as="th">Supervisor</TableCell>
-                <TableCell as="th">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {agents.map((agent) => (
-                <TableRow key={agent.id}>
-                  <TableCell>{agent.name}</TableCell>
-                  <TableCell>{agent.email}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variation={
-                        agent.status === "AVAILABLE" ? "success" :
-                        agent.status === "BUSY" ? "warning" : "error"
-                      }
-                    >
-                      {agent.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{agent.supervisorId || 'Unassigned'}</TableCell>
-                  <TableCell>
-                    {!agent.supervisorId && agent.id && (
-                      <Button
-                        size="small"
-                        onClick={() => assignAgentToMe(agent.id)}
-                      >
-                        Assign to Me
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
       </Flex>
     </View>
+  );
+}
+
+export default function AgentManagementPage() {
+  return (
+    <Suspense>
+      <AgentManagementContent />
+    </Suspense>
   );
 }

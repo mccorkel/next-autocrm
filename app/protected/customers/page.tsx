@@ -21,15 +21,26 @@ import {
   useTheme,
   View,
   Alert,
+  Text,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { useAgent } from "../../contexts/AgentContext";
+import { Suspense } from "react";
 
 Amplify.configure(outputs);
 const client = generateClient<Schema>();
 
-export default function CustomerManagement() {
+type CustomerType = Schema["Customer"]["type"];
+
+function CustomerManagementContent() {
   const { tokens } = useTheme();
-  const [customers, setCustomers] = useState<Array<Schema["Customer"]["type"]>>([]);
+  const { translations } = useLanguage();
+  const { currentAgentId } = useAgent();
+  const [customers, setCustomers] = useState<CustomerType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | undefined>();
+  const [success, setSuccess] = useState<string | undefined>();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
@@ -39,14 +50,22 @@ export default function CustomerManagement() {
   const router = useRouter();
 
   useEffect(() => {
-    listCustomers();
-  }, []);
+    async function fetchCustomers() {
+      try {
+        const customersResponse = await client.models.Customer.list();
+        if (customersResponse.data) {
+          setCustomers(customersResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+        setError('Failed to load customers. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  function listCustomers() {
-    client.models.Customer.observeQuery().subscribe({
-      next: (data) => setCustomers([...data.items]),
-    });
-  }
+    fetchCustomers();
+  }, []);
 
   async function sendTestEmail(customerEmail: string | null | undefined) {
     if (!customerEmail) {
@@ -118,20 +137,38 @@ export default function CustomerManagement() {
     }
   }
 
+  if (loading) {
+    return (
+      <View 
+        padding={tokens.space.large}
+        backgroundColor={tokens.colors.background.primary}
+        minHeight="100vh"
+      >
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <View 
       padding={tokens.space.large}
       backgroundColor={tokens.colors.background.primary}
       minHeight="100vh"
     >
-      <Flex direction="column" gap={tokens.space.large}>
+      <Flex direction="column" gap={tokens.space.medium}>
         <Flex justifyContent="space-between" alignItems="center">
-          <Heading level={1}>Customer Management</Heading>
+          <Heading level={2} color={tokens.colors.font.primary}>Customer Management</Heading>
         </Flex>
 
-        {emailStatus && (
-          <Alert variation={emailStatus.type}>
-            {emailStatus.message}
+        {error && (
+          <Alert variation="error">
+            {error}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert variation="success">
+            {success}
           </Alert>
         )}
 
@@ -139,7 +176,6 @@ export default function CustomerManagement() {
           <Table highlightOnHover={true}>
             <TableHead>
               <TableRow>
-                <TableCell as="th">ID</TableCell>
                 <TableCell as="th">Name</TableCell>
                 <TableCell as="th">Email</TableCell>
                 <TableCell as="th">Company</TableCell>
@@ -150,22 +186,6 @@ export default function CustomerManagement() {
             <TableBody>
               {customers.map((customer) => (
                 <TableRow key={customer.id}>
-                  <TableCell>
-                    <a 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        router.push(`/protected/customers/${customer.id}`);
-                      }}
-                      href="#"
-                      style={{
-                        color: '#007EB9',
-                        textDecoration: 'none',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {customer.id?.slice(0, 8)}
-                    </a>
-                  </TableCell>
                   <TableCell>{customer.name}</TableCell>
                   <TableCell>{customer.email}</TableCell>
                   <TableCell>{customer.company}</TableCell>
@@ -173,9 +193,9 @@ export default function CustomerManagement() {
                   <TableCell>
                     <Button
                       size="small"
-                      onClick={() => sendTestEmail(customer.email)}
+                      onClick={() => {/* TODO: Add edit functionality */}}
                     >
-                      Send Test Email
+                      Edit
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -232,5 +252,13 @@ export default function CustomerManagement() {
         )}
       </Flex>
     </View>
+  );
+}
+
+export default function CustomerManagementPage() {
+  return (
+    <Suspense>
+      <CustomerManagementContent />
+    </Suspense>
   );
 }

@@ -10,32 +10,37 @@ import {
   useTheme,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { Suspense } from "react";
 
-export default function SuccessPage() {
+function ContactSuccessContent() {
   const router = useRouter();
   const { tokens } = useTheme();
+  const { translations } = useLanguage();
 
   return (
-    <View padding={tokens.space.large}>
-      <Flex direction="column" alignItems="center" gap={tokens.space.large}>
-        <Card width="100%" maxWidth="800px">
-          <Flex direction="column" gap={tokens.space.medium} alignItems="center">
-            <Heading level={1}>Thank You!</Heading>
-            <Text textAlign="center">
-              Your support request has been submitted successfully. Our team will review it and get back to you as soon as possible.
-            </Text>
-            <Text variation="secondary" textAlign="center">
-              You will receive a confirmation email with your ticket details.
-            </Text>
-            <Button
-              variation="primary"
-              onClick={() => router.push("/")}
-            >
-              Return to Home
-            </Button>
-          </Flex>
-        </Card>
-      </Flex>
+    <View 
+      padding={tokens.space.large}
+      backgroundColor={tokens.colors.background.primary}
+      minHeight="100vh"
+    >
+      <Card width="100%" maxWidth="800px" margin="0 auto">
+        <Flex direction="column" gap={tokens.space.medium} alignItems="center" textAlign="center">
+          <Heading level={1}>{translations.contact.success}</Heading>
+          <Text>{translations.contact.form.description}</Text>
+          <Button onClick={() => router.push("/")} variation="primary">
+            {translations.common.back}
+          </Button>
+        </Flex>
+      </Card>
     </View>
+  );
+}
+
+export default function ContactSuccessPage() {
+  return (
+    <Suspense>
+      <ContactSuccessContent />
+    </Suspense>
   );
 } 

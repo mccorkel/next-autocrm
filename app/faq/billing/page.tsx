@@ -13,8 +13,9 @@ import {
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { Suspense } from "react";
 
-export default function BillingFAQPage() {
+function BillingFAQContent() {
   const router = useRouter();
   const { tokens } = useTheme();
   const { translations } = useLanguage();
@@ -80,5 +81,13 @@ export default function BillingFAQPage() {
         </Card>
       </Flex>
     </View>
+  );
+}
+
+export default function BillingFAQPage() {
+  return (
+    <Suspense>
+      <BillingFAQContent />
+    </Suspense>
   );
 } 

@@ -12,6 +12,7 @@ const client = generateClient<Schema>();
 
 type AgentContextType = {
   currentAgentId: string | null;
+  setCurrentAgentId: (id: string | null) => void;
   isInitialized: boolean;
   isLoading: boolean;
   error: string | null;
@@ -162,6 +163,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     <AgentContext.Provider 
       value={{ 
         currentAgentId,
+        setCurrentAgentId,
         isInitialized,
         isLoading,
         error,

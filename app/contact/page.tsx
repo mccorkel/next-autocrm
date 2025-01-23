@@ -17,64 +17,51 @@ import {
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "../contexts/LanguageContext";
+import { Suspense } from "react";
 
 const client = generateClient<Schema>();
 
 type TicketCategory = "ACCOUNT" | "BILLING" | "SUPPORT" | "SALES" | "OTHER";
 
-export default function ContactPage() {
+function ContactContent() {
   const router = useRouter();
   const { tokens } = useTheme();
   const { translations } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    company: "",
+    phone: "",
+    category: "SUPPORT" as TicketCategory,
+    subject: "",
+    message: "",
+  });
 
-  // Customer fields
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [company, setCompany] = useState("");
-  const [phone, setPhone] = useState("");
-
-  // Ticket fields
-  const [category, setCategory] = useState<TicketCategory>("SUPPORT");
-  const [subject, setSubject] = useState("");
-  const [description, setDescription] = useState("");
-
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      // First create the customer
-      const customerResult = await client.models.Customer.create({
-        name,
-        email,
-        company,
-        phone,
+      await client.models.Ticket.create({
+        ...formData,
+        status: "OPEN",
       });
 
-      if (customerResult.data) {
-        // Then create the ticket associated with the customer
-        await client.models.Ticket.create({
-          title: subject,
-          description,
-          status: "OPEN",
-          priority: "MEDIUM",
-          category,
-          customerId: customerResult.data.id,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-
-        // Redirect to a success page
-        router.push("/contact/success");
-      }
+      router.push("/contact/success");
     } catch (error) {
-      console.error("Error submitting form:", error);
-      // Here you would typically show an error message to the user
-    } finally {
+      console.error("Error creating ticket:", error);
       setIsSubmitting(false);
     }
-  }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   return (
     <View 
@@ -82,91 +69,86 @@ export default function ContactPage() {
       backgroundColor={tokens.colors.background.primary}
       minHeight="100vh"
     >
-      <Flex direction="column" alignItems="center" gap={tokens.space.large}>
-        <Card width="100%" maxWidth="800px">
+      <Card width="100%" maxWidth="800px" margin="0 auto">
+        <form onSubmit={handleSubmit}>
           <Flex direction="column" gap={tokens.space.medium}>
             <Heading level={1}>{translations.contact.title}</Heading>
-            <Text>
-              {translations.contact.form.description}
-            </Text>
+            <Text>{translations.contact.form.description}</Text>
 
-            <form onSubmit={handleSubmit}>
-              <Flex direction="column" gap={tokens.space.medium}>
-                {/* Customer Information Section */}
-                <Heading level={2}>{translations.contact.form.customerInfo}</Heading>
-                <TextField
-                  label={translations.contact.form.name}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-                <TextField
-                  label={translations.contact.form.email}
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <TextField
-                  label={translations.contact.form.company}
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                />
-                <TextField
-                  label={translations.contact.form.phone}
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+            <Heading level={3}>{translations.contact.form.customerInfo}</Heading>
+            <TextField
+              label={translations.contact.form.name}
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+            <TextField
+              label={translations.contact.form.email}
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+            <TextField
+              label={translations.contact.form.company}
+              name="company"
+              value={formData.company}
+              onChange={handleChange}
+            />
+            <TextField
+              label={translations.contact.form.phone}
+              name="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={handleChange}
+            />
 
-                {/* Ticket Information Section */}
-                <Heading level={2}>{translations.contact.form.issueDetails}</Heading>
-                <SelectField
-                  label={translations.contact.form.category}
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as TicketCategory)}
-                >
-                  <option value="SUPPORT">{translations.contact.form.categories.support}</option>
-                  <option value="BILLING">{translations.contact.form.categories.billing}</option>
-                  <option value="SALES">{translations.contact.form.categories.sales}</option>
-                  <option value="ACCOUNT">{translations.contact.form.categories.account}</option>
-                  <option value="OTHER">{translations.contact.form.categories.other}</option>
-                </SelectField>
-                <TextField
-                  label={translations.contact.form.subject}
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  required
-                />
-                <TextAreaField
-                  label={translations.contact.form.message}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                />
+            <Heading level={3}>{translations.contact.form.issueDetails}</Heading>
+            <SelectField
+              label={translations.contact.form.category}
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              required
+            >
+              <option value="SUPPORT">{translations.contact.form.categories.support}</option>
+              <option value="BILLING">{translations.contact.form.categories.billing}</option>
+              <option value="SALES">{translations.contact.form.categories.sales}</option>
+              <option value="ACCOUNT">{translations.contact.form.categories.account}</option>
+              <option value="OTHER">{translations.contact.form.categories.other}</option>
+            </SelectField>
+            <TextField
+              label={translations.contact.form.subject}
+              name="subject"
+              value={formData.subject}
+              onChange={handleChange}
+              required
+            />
+            <TextAreaField
+              label={translations.contact.form.message}
+              name="message"
+              value={formData.message}
+              onChange={handleChange}
+              required
+              rows={5}
+            />
 
-                <Flex gap={tokens.space.medium}>
-                  <Button
-                    onClick={() => router.back()}
-                    variation="link"
-                    isDisabled={isSubmitting}
-                  >
-                    {translations.common.back}
-                  </Button>
-                  <Button
-                    type="submit"
-                    variation="primary"
-                    isLoading={isSubmitting}
-                    loadingText={translations.contact.form.submitting}
-                  >
-                    {translations.contact.form.submit}
-                  </Button>
-                </Flex>
-              </Flex>
-            </form>
+            <Button type="submit" variation="primary" isLoading={isSubmitting}>
+              {isSubmitting ? translations.contact.form.submitting : translations.contact.form.submit}
+            </Button>
           </Flex>
-        </Card>
-      </Flex>
+        </form>
+      </Card>
     </View>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense>
+      <ContactContent />
+    </Suspense>
   );
 } 

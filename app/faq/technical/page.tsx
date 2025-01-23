@@ -13,6 +13,7 @@ import {
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { Suspense } from "react";
 
 const technicalFaqs = [
   {
@@ -49,7 +50,7 @@ const technicalFaqs = [
   }
 ];
 
-export default function TechnicalFAQPage() {
+function TechnicalFAQContent() {
   const router = useRouter();
   const { tokens } = useTheme();
   const { translations } = useLanguage();
@@ -115,5 +116,13 @@ export default function TechnicalFAQPage() {
         </Card>
       </Flex>
     </View>
+  );
+}
+
+export default function TechnicalFAQPage() {
+  return (
+    <Suspense>
+      <TechnicalFAQContent />
+    </Suspense>
   );
 } 
