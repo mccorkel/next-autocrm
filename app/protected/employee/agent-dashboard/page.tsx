@@ -259,12 +259,41 @@ export default function AgentDashboard() {
                       {new Date(ticket.createdAt || "").toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="small"
-                        onClick={() => router.push(ticketUrl)}
-                      >
-                        View Details
-                      </Button>
+                      {ticket.assignedAgentId === currentAgentId ? (
+                        <Button
+                          size="small"
+                          onClick={async () => {
+                            try {
+                              await client.models.Ticket.update({
+                                id: ticket.id,
+                                assignedAgentId: null
+                              });
+                              fetchTickets();
+                            } catch (error) {
+                              console.error('Error unassigning ticket:', error);
+                            }
+                          }}
+                        >
+                          Unassign
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          onClick={async () => {
+                            try {
+                              await client.models.Ticket.update({
+                                id: ticket.id,
+                                assignedAgentId: currentAgentId
+                              });
+                              fetchTickets();
+                            } catch (error) {
+                              console.error('Error assigning ticket:', error);
+                            }
+                          }}
+                        >
+                          Assign To Me
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
