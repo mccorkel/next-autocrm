@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import { type AuthUser } from '@aws-amplify/auth';
 import { checkAndCreateAgent } from "@/app/utils/agent";
+import { Amplify } from "aws-amplify";
 
 const client = generateClient<Schema>();
 
@@ -35,22 +36,55 @@ export default function AgentDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [agents, setAgents] = useState<Array<Schema["Agent"]["type"]>>([]);
+  const [userGroups, setUserGroups] = useState<string[]>([]);
+  const [isAgentInitialized, setIsAgentInitialized] = useState(false);
+  const [isAmplifyConfigured, setIsAmplifyConfigured] = useState(false);
   const hasInitialized = useRef(false);
 
+  // Wait for Amplify configuration
   useEffect(() => {
-    async function initializeAgent() {
-      const agentId = await checkAndCreateAgent();
-      if (agentId) {
-        setCurrentAgentId(agentId);
+    const checkAmplifyConfig = () => {
+      try {
+        // This will throw if Amplify is not configured
+        const config = Amplify.getConfig();
+        if (config) {
+          setIsAmplifyConfigured(true);
+        }
+      } catch (error) {
+        // Retry after a short delay
+        setTimeout(checkAmplifyConfig, 100);
       }
-    }
-    initializeAgent();
+    };
+    checkAmplifyConfig();
   }, []);
 
   useEffect(() => {
+    if (!isAmplifyConfigured) return;
+
+    async function initializeAgent() {
+      try {
+        const agentId = await checkAndCreateAgent();
+        if (agentId) {
+          setCurrentAgentId(agentId);
+        }
+
+        // Get user groups
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] || [];
+        setUserGroups(groups);
+        setIsAgentInitialized(true);
+      } catch (error) {
+        console.error('Error initializing agent:', error);
+      }
+    }
+    initializeAgent();
+  }, [isAmplifyConfigured]);
+
+  useEffect(() => {
+    if (!isAmplifyConfigured) return;
     fetchTickets();
     fetchAgents();
-  }, [statusFilter]);
+  }, [statusFilter, isAmplifyConfigured]);
 
   async function fetchAgents() {
     try {
@@ -259,10 +293,11 @@ export default function AgentDashboard() {
                       {new Date(ticket.createdAt || "").toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      {ticket.assignedAgentId === currentAgentId ? (
+                      {ticket.assignedAgentId && ticket.assignedAgentId === currentAgentId ? (
                         <Button
                           size="small"
                           onClick={async () => {
+                            if (!isAgentInitialized) return;
                             try {
                               await client.models.Ticket.update({
                                 id: ticket.id,
@@ -280,6 +315,7 @@ export default function AgentDashboard() {
                         <Button
                           size="small"
                           onClick={async () => {
+                            if (!isAgentInitialized || !currentAgentId) return;
                             try {
                               await client.models.Ticket.update({
                                 id: ticket.id,
@@ -290,8 +326,13 @@ export default function AgentDashboard() {
                               console.error('Error assigning ticket:', error);
                             }
                           }}
+                          isDisabled={Boolean(
+                            !isAgentInitialized ||
+                            (ticket.assignedAgentId && 
+                            !userGroups.some(group => ['ADMIN', 'SUPER'].includes(group)))
+                          )}
                         >
-                          Assign To Me
+                          {!ticket.assignedAgentId ? 'Assign To Me' : 'Take Over'}
                         </Button>
                       )}
                     </TableCell>

@@ -11,8 +11,6 @@ interface AuthWrapperProps {
   children: ((props: { user?: AuthUser; signOut?: () => void }) => ReactNode) | ReactNode;
 }
 
-Amplify.configure(outputs);
-
 export default function AuthWrapper({ children }: AuthWrapperProps) {
   return (
     <Flex direction="column" minHeight="100vh">

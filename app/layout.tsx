@@ -7,11 +7,16 @@ import { theme } from './theme';
 import outputs from "@/amplify_outputs.json";
 import './globals.css';
 import { AgentProvider } from '@/app/contexts/AgentContext';
-
-Amplify.configure(outputs);
+import { useEffect } from 'react';
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const { tokens } = useTheme();
+
+  useEffect(() => {
+    console.log("Configuring Amplify with outputs:", outputs);
+    Amplify.configure(outputs);
+  }, []);
+
   return (
     <View
       backgroundColor={tokens.colors.background.primary}

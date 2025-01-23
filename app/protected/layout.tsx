@@ -13,10 +13,6 @@ import { AuthUser } from '@aws-amplify/auth';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 
-// Configure Amplify
-console.log("Configuring Amplify with outputs:", outputs);
-Amplify.configure(outputs);
-
 const client = generateClient<Schema>();
 
 // Loading screen component
