@@ -13,8 +13,33 @@ import type { Schema } from "@/amplify/data/resource";
 import { TabProvider, useTabContext } from '@/app/contexts/TabContext';
 import React from 'react';
 import { useAgent } from '@/app/contexts/AgentContext';
+import { ThemeProvider as MUIThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 
 const client = generateClient<Schema>();
+
+const muiTheme = createTheme({
+  palette: {
+    primary: {
+      main: '#E91E63',
+    },
+    secondary: {
+      main: '#2196F3',
+    },
+  },
+  typography: {
+    fontFamily: 'Inter, system-ui, Avenir, Helvetica, Arial, sans-serif',
+  },
+  components: {
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          minHeight: 48,
+        },
+      },
+    },
+  },
+});
 
 // Create a memoized content component
 const MemoizedContent = memo(function MemoizedContent({ children }: { children: React.ReactNode }) {
@@ -282,20 +307,19 @@ function AuthContent({
   );
 }
 
-export default function ProtectedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthWrapper>
       {({ user, signOut: authSignOut }) => (
         <TabProvider>
-          <AuthContent
-            user={user}
-            signOut={authSignOut}
-            children={children}
-          />
+          <MUIThemeProvider theme={muiTheme}>
+            <CssBaseline />
+            <AuthContent
+              user={user}
+              signOut={authSignOut}
+              children={children}
+            />
+          </MUIThemeProvider>
         </TabProvider>
       )}
     </AuthWrapper>

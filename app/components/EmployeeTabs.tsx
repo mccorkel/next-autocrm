@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Button, Flex, Text, View, useTheme } from '@aws-amplify/ui-react';
+import { View, useTheme } from '@aws-amplify/ui-react';
 import { useTabContext } from '@/app/contexts/TabContext';
 import { useAgent } from '@/app/contexts/AgentContext';
-import styles from './EmployeeTabs.module.css';
+import { Tabs, Tab, Box, IconButton } from '@mui/material';
+import { Close as CloseIcon, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
 
 interface Tab {
   label: string;
@@ -16,31 +18,55 @@ interface Props {
   userGroups: string[];
 }
 
+const StyledTabs = styled(Tabs)(({ theme }) => ({
+  '& .MuiTabs-indicator': {
+    backgroundColor: '#E91E63',
+    height: 3,
+  },
+  '& .MuiTabs-scrollButtons': {
+    '&.Mui-disabled': {
+      opacity: 0.3,
+    },
+  },
+}));
+
+const StyledTab = styled(Tab)(({ theme }) => ({
+  textTransform: 'none',
+  minWidth: 0,
+  padding: '12px 16px',
+  color: 'rgba(0, 0, 0, 0.7)',
+  '&.Mui-selected': {
+    color: '#E91E63',
+    fontWeight: 'bold',
+  },
+  '&:hover': {
+    color: '#E91E63',
+    opacity: 1,
+  },
+}));
+
+const CloseButton = styled(IconButton)(({ theme }) => ({
+  padding: 4,
+  marginLeft: 8,
+  '&:hover': {
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+  },
+}));
+
 export default function EmployeeTabs({ userGroups }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const { tokens } = useTheme();
   const { currentAgentId, isInitialized, isLoading } = useAgent();
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(false);
   const { state: tabState, updateTabData, removeTab, cacheComponent, getCachedComponent } = useTabContext();
-
-  // Log agent context values when they change
-  useEffect(() => {
-    console.log('EmployeeTabs agent context:', {
-      currentAgentId,
-      isInitialized,
-      isLoading,
-      pathname
-    });
-  }, [currentAgentId, isInitialized, isLoading, pathname]);
 
   // Static tabs based on user groups
   const staticTabs = [
     { label: 'Dashboard', value: '/protected/employee/agent-dashboard' },
+    ...(userGroups.some(group => ['ADMIN', 'SUPER'].includes(group)) ? [
+      { label: 'Agent Management', value: '/protected/employee/agent-management' }
+    ] : []),
     ...(userGroups.includes('ADMIN') ? [
-      { label: 'Agent Management', value: '/protected/employee/agent-management' },
       { label: 'User Management', value: '/protected/employee/user-management' }
     ] : []),
     ...(userGroups.some(group => ['ADMIN', 'SUPER', 'AGENT'].includes(group)) ? [
@@ -50,7 +76,7 @@ export default function EmployeeTabs({ userGroups }: Props) {
 
   // Dynamic tabs from context
   const dynamicTabs = Object.entries(tabState)
-    .filter(([_, { data }]) => data && data.label) // Filter out entries without valid data
+    .filter(([_, { data }]) => data && data.label)
     .map(([path, { data }]) => ({
       label: data.label,
       value: path
@@ -58,37 +84,8 @@ export default function EmployeeTabs({ userGroups }: Props) {
 
   const allTabs = [...staticTabs, ...dynamicTabs];
 
-  const checkScrollButtons = () => {
-    if (!scrollContainerRef.current) return;
-    
-    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-    setShowLeftArrow(scrollLeft > 0);
-    setShowRightArrow(scrollLeft < scrollWidth - clientWidth);
-  };
-
-  useEffect(() => {
-    checkScrollButtons();
-    window.addEventListener('resize', checkScrollButtons);
-    return () => window.removeEventListener('resize', checkScrollButtons);
-  }, []);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (!scrollContainerRef.current) return;
-    
-    const scrollAmount = 200;
-    const container = scrollContainerRef.current;
-    const newScrollLeft = direction === 'left' 
-      ? container.scrollLeft - scrollAmount 
-      : container.scrollLeft + scrollAmount;
-    
-    container.scrollTo({
-      left: newScrollLeft,
-      behavior: 'smooth'
-    });
-  };
-
-  const handleTabClick = (tab: Tab) => {
-    router.push(tab.value);
+  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
+    router.push(newValue);
   };
 
   const handleCloseTab = (e: React.MouseEvent, tab: Tab) => {
@@ -105,7 +102,6 @@ export default function EmployeeTabs({ userGroups }: Props) {
 
   // Effect to update tab data when route changes
   useEffect(() => {
-    // Only update tab data for dynamic routes
     const ticketMatch = pathname.match(/^\/protected\/tickets\/(.+)$/);
     const customerMatch = pathname.match(/^\/protected\/customers\/(.+)$/);
     const agentMatch = pathname.match(/^\/protected\/agents\/(.+)$/);
@@ -116,72 +112,41 @@ export default function EmployeeTabs({ userGroups }: Props) {
       updateTabData(pathname, { label: `Customer #${customerMatch[1]}` });
     } else if (agentMatch) {
       const agentId = agentMatch[1];
-      console.log('Agent tab opened:', {
-        pathname,
-        agentId,
-        currentAgentId,
-        isInitialized,
-        isLoading,
-        isMyProfile: currentAgentId === agentId
-      });
-      
       const label = currentAgentId === agentId ? 'My Profile' : `Agent #${agentId}`;
-      console.log('Setting agent tab label:', {
-        label,
-        reason: currentAgentId === agentId ? 'Current agent viewing their own profile' : 'Viewing another agent\'s profile',
-        currentAgentId,
-        agentId
-      });
-      
       updateTabData(pathname, { label });
     }
-  }, [pathname, updateTabData, currentAgentId, isInitialized, isLoading]);
+  }, [pathname, updateTabData, currentAgentId]);
 
   return (
-    <View width="100%" position="relative">
-      {showLeftArrow && (
-        <Button
-          onClick={() => scroll('left')}
-          className={styles.scrollButton}
-          style={{ left: 0 }}
-        >
-          ←
-        </Button>
-      )}
-      
-      <Flex
-        ref={scrollContainerRef}
-        className={styles.tabsContainer}
-        onScroll={checkScrollButtons}
+    <Box sx={{ width: '100%', bgcolor: 'background.paper' }}>
+      <StyledTabs
+        value={pathname}
+        onChange={handleTabChange}
+        variant="scrollable"
+        scrollButtons="auto"
+        aria-label="navigation tabs"
       >
         {allTabs.map((tab) => (
-          <View
+          <StyledTab
             key={tab.value}
-            onClick={() => handleTabClick(tab)}
-            className={`${styles.tabContainer} ${pathname === tab.value ? styles.activeTab : ''}`}
-          >
-            <Text className={styles.tabText}>{tab.label}</Text>
-            {!staticTabs.some(staticTab => staticTab.value === tab.value) && (
-              <View
-                onClick={(e) => handleCloseTab(e, tab)}
-                className={styles.closeButton}
-              >
-                ×
-              </View>
-            )}
-          </View>
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                {tab.label}
+                {!staticTabs.some(staticTab => staticTab.value === tab.value) && (
+                  <CloseButton
+                    size="small"
+                    onClick={(e) => handleCloseTab(e, tab)}
+                    aria-label="close tab"
+                  >
+                    <CloseIcon fontSize="small" />
+                  </CloseButton>
+                )}
+              </Box>
+            }
+            value={tab.value}
+          />
         ))}
-      </Flex>
-
-      {showRightArrow && (
-        <Button
-          onClick={() => scroll('right')}
-          className={styles.scrollButton}
-          style={{ right: 0 }}
-        >
-          →
-        </Button>
-      )}
-    </View>
+      </StyledTabs>
+    </Box>
   );
 } 

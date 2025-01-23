@@ -1,15 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {
   Button,
   Card,
-  Collection,
   Flex,
   Heading,
-  SelectField,
   Table,
   TableCell,
   TableBody,
@@ -20,14 +18,12 @@ import {
   useTheme,
   Text,
 } from "@aws-amplify/ui-react";
-import { useRouter } from "next/navigation";
-import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
-import { type AuthUser } from '@aws-amplify/auth';
-import { checkAndCreateAgent } from "@/app/utils/agent";
-import { Amplify } from "aws-amplify";
+import { useRouter, useSearchParams } from "next/navigation";
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { useAgent } from "@/app/contexts/AgentContext";
 import { useLanguage } from "../../../contexts/LanguageContext";
 import { Suspense } from "react";
+import DashboardTabs from '@/app/components/DashboardTabs';
 
 const client = generateClient<Schema>();
 
@@ -35,35 +31,29 @@ type BadgeVariation = "info" | "warning" | "error" | "success";
 
 function AgentDashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentView = searchParams.get('view') || 'all';
   const { tokens } = useTheme();
-  const { currentAgentId, isInitialized: isAgentInitialized, isLoading } = useAgent();
+  const { currentAgentId, isInitialized } = useAgent();
   const { translations } = useLanguage();
   const [tickets, setTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [allTickets, setAllTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
+  const [assignedTickets, setAssignedTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
   const [agents, setAgents] = useState<Array<Schema["Agent"]["type"]>>([]);
   const [userGroups, setUserGroups] = useState<string[]>([]);
-  const [isAmplifyConfigured, setIsAmplifyConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Wait for Amplify configuration
+  // Log view changes
   useEffect(() => {
-    const checkAmplifyConfig = () => {
-      try {
-        const config = Amplify.getConfig();
-        if (config) {
-          setIsAmplifyConfigured(true);
-        }
-      } catch (error) {
-        setTimeout(checkAmplifyConfig, 100);
-      }
-    };
-    checkAmplifyConfig();
-  }, []);
+    console.log('View changed:', {
+      currentView,
+      currentAgentId,
+      isInitialized
+    });
+  }, [currentView, currentAgentId, isInitialized]);
 
-  // Get user groups when Amplify is configured
+  // Get user groups
   useEffect(() => {
-    if (!isAmplifyConfigured) return;
-
     async function getUserGroups() {
       try {
         const session = await fetchAuthSession();
@@ -75,60 +65,71 @@ function AgentDashboardContent() {
     }
     
     getUserGroups();
-  }, [isAmplifyConfigured]);
+  }, []);
 
-  // Fetch data when agent is initialized
+  // Fetch agents
   useEffect(() => {
-    if (!isAmplifyConfigured || !isAgentInitialized || !currentAgentId) {
-      console.log('Waiting for initialization:', {
-        isAmplifyConfigured,
-        isAgentInitialized,
-        currentAgentId
-      });
+    async function fetchAgents() {
+      try {
+        const agentsResponse = await client.models.Agent.list();
+        if (agentsResponse.data) {
+          setAgents(agentsResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching agents:', error);
+      }
+    }
+
+    if (isInitialized) {
+      fetchAgents();
+    }
+  }, [isInitialized]);
+
+  // Fetch tickets
+  const fetchTickets = async () => {
+    if (!isInitialized || !currentAgentId) {
+      console.log('Not ready to fetch:', { isInitialized, currentAgentId });
       return;
     }
-    
-    console.log('Fetching data with agent ID:', currentAgentId);
-    fetchTickets();
-    fetchAgents();
-  }, [statusFilter, isAmplifyConfigured, isAgentInitialized, currentAgentId]);
 
-  async function fetchAgents() {
-    if (!isAgentInitialized || !currentAgentId) return;
+    setLoading(true);
     try {
-      const { data } = await client.models.Agent.list();
-      setAgents(data);
-    } catch (error) {
-      console.error("Error fetching agents:", error);
-    }
-  }
+      // Fetch all tickets
+      const allTicketsResponse = await client.models.Ticket.list();
+      const allTicketsData = allTicketsResponse.data || [];
+      setAllTickets(allTicketsData);
 
-  async function fetchTickets() {
-    if (!isAgentInitialized || !currentAgentId) return;
-    try {
-      const filter = statusFilter !== "all" 
-        ? { status: { eq: statusFilter } }
-        : undefined;
-
-      const { data } = await client.models.Ticket.list({
-        filter,
+      // Fetch assigned tickets
+      const assignedTicketsResponse = await client.models.Ticket.list({
+        filter: {
+          assignedAgentId: {
+            eq: currentAgentId as string
+          }
+        }
       });
-      
-      // Sort tickets in memory since DataStore doesn't support sorting
-      const sortedTickets = [...data].sort((a, b) => {
+      const assignedTicketsData = assignedTicketsResponse.data || [];
+      setAssignedTickets(assignedTicketsData);
+
+      // Set current view tickets
+      const currentTickets = currentView === 'assigned' ? assignedTicketsData : allTicketsData;
+      const sortedTickets = [...currentTickets].sort((a, b) => {
         const dateA = new Date(a.createdAt || "").getTime();
         const dateB = new Date(b.createdAt || "").getTime();
         return dateB - dateA;
       });
-      
       setTickets(sortedTickets);
     } catch (error) {
-      console.error("Error fetching tickets:", error);
+      console.error('Error fetching tickets:', error);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
+  useEffect(() => {
+    fetchTickets();
+  }, [currentAgentId, isInitialized, currentView]);
+
+  // Helper functions for badge colors
   function getPriorityColor(priority: string | null | undefined): BadgeVariation {
     switch (priority) {
       case "URGENT":
@@ -157,68 +158,36 @@ function AgentDashboardContent() {
     }
   }
 
+  // Render loading state
   if (loading) {
     return (
-      <View 
-        padding={tokens.space.large}
-        backgroundColor={tokens.colors.background.primary}
-        minHeight="100vh"
-      >
+      <View padding={tokens.space.large}>
         <Text>Loading...</Text>
       </View>
     );
   }
 
+  // Render main content
   return (
-    <Flex 
-      direction="column" 
-      gap={tokens.space.large}
-      width="100%"
-      flex="1"
-      style={{
-        minHeight: 0,
-        display: 'flex'
-      }}
-    >
-      <Flex justifyContent="space-between" alignItems="center" width="100%">
-        <Heading level={1}>Agent Dashboard</Heading>
-        <SelectField
-          label="Filter by Status"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">All Tickets</option>
-          <option value="OPEN">Open</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="RESOLVED">Resolved</option>
-          <option value="CLOSED">Closed</option>
-        </SelectField>
-      </Flex>
+    <Flex direction="column" gap={tokens.space.large}>
+      <Card>
+        <Flex direction="column" gap={tokens.space.medium}>
+          <Flex justifyContent="space-between" alignItems="center">
+            <Heading level={2}>Ticket Management</Heading>
+            <Button
+              onClick={() => router.push('/protected/tickets/new')}
+              variation="primary"
+            >
+              Create Ticket
+            </Button>
+          </Flex>
+          
+          <DashboardTabs 
+            totalTickets={allTickets.length} 
+            assignedTickets={assignedTickets.length} 
+          />
 
-      <Card
-        padding={tokens.space.medium}
-        borderRadius="medium"
-        backgroundColor={tokens.colors.background.secondary}
-        variation="outlined"
-        width="100%"
-        flex="1"
-        style={{
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        <View
-          width="100%"
-          flex="1"
-          style={{
-            overflowX: 'auto',
-            overflowY: 'auto',
-            minHeight: 0
-          }}
-        >
           <Table
-            caption="Support Tickets"
             highlightOnHover={true}
             variation="striped"
             size="small"
@@ -320,13 +289,14 @@ function AgentDashboardContent() {
                         <Button
                           size="small"
                           onClick={async () => {
-                            if (!isAgentInitialized) return;
+                            if (!isInitialized) return;
                             try {
                               await client.models.Ticket.update({
                                 id: ticket.id,
                                 assignedAgentId: null
                               });
-                              fetchTickets();
+                              // Refresh all ticket data
+                              await fetchTickets();
                             } catch (error) {
                               console.error('Error unassigning ticket:', error);
                             }
@@ -338,19 +308,20 @@ function AgentDashboardContent() {
                         <Button
                           size="small"
                           onClick={async () => {
-                            if (!isAgentInitialized || !currentAgentId) return;
+                            if (!isInitialized || !currentAgentId) return;
                             try {
                               await client.models.Ticket.update({
                                 id: ticket.id,
                                 assignedAgentId: currentAgentId
                               });
-                              fetchTickets();
+                              // Refresh all ticket data
+                              await fetchTickets();
                             } catch (error) {
                               console.error('Error assigning ticket:', error);
                             }
                           }}
                           isDisabled={Boolean(
-                            !isAgentInitialized ||
+                            !isInitialized ||
                             (ticket.assignedAgentId && 
                             !userGroups.some(group => ['ADMIN', 'SUPER'].includes(group)))
                           )}
@@ -364,7 +335,7 @@ function AgentDashboardContent() {
               })}
             </TableBody>
           </Table>
-        </View>
+        </Flex>
       </Card>
     </Flex>
   );
