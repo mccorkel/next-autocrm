@@ -34,6 +34,7 @@ export default function AgentDashboard() {
   const [tickets, setTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
+  const [agents, setAgents] = useState<Array<Schema["Agent"]["type"]>>([]);
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -48,7 +49,17 @@ export default function AgentDashboard() {
 
   useEffect(() => {
     fetchTickets();
+    fetchAgents();
   }, [statusFilter]);
+
+  async function fetchAgents() {
+    try {
+      const { data } = await client.models.Agent.list();
+      setAgents(data);
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+    }
+  }
 
   async function fetchTickets() {
     try {
@@ -162,39 +173,91 @@ export default function AgentDashboard() {
                 <TableCell as="th">Status</TableCell>
                 <TableCell as="th">Priority</TableCell>
                 <TableCell as="th">Category</TableCell>
+                <TableCell as="th">Customer ID</TableCell>
+                <TableCell as="th">Assigned To</TableCell>
                 <TableCell as="th">Created</TableCell>
                 <TableCell as="th">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {tickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell>{ticket.id?.slice(0, 8)}</TableCell>
-                  <TableCell>{ticket.title}</TableCell>
-                  <TableCell>
-                    <Badge variation={getStatusColor(ticket.status)}>
-                      {ticket.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variation={getPriorityColor(ticket.priority)}>
-                      {ticket.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{ticket.category}</TableCell>
-                  <TableCell>
-                    {new Date(ticket.createdAt || "").toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="small"
-                      onClick={() => router.push(`/protected/tickets/${ticket.id}`)}
-                    >
-                      View Details
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {tickets.map((ticket) => {
+                const assignedAgent = agents.find(agent => agent.id === ticket.assignedAgentId);
+                const ticketUrl = `/protected/tickets/${ticket.id}`;
+                return (
+                  <TableRow key={ticket.id}>
+                    <TableCell>
+                      <a 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          router.push(ticketUrl);
+                        }}
+                        href="#"
+                        style={{
+                          color: '#007EB9',
+                          textDecoration: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {ticket.id?.slice(0, 8)}
+                      </a>
+                    </TableCell>
+                    <TableCell>{ticket.title}</TableCell>
+                    <TableCell>
+                      <Badge variation={getStatusColor(ticket.status)}>
+                        {ticket.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variation={getPriorityColor(ticket.priority)}>
+                        {ticket.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{ticket.category}</TableCell>
+                    <TableCell>
+                      {ticket.customerId ? (
+                        <a 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            router.push(`/protected/customers/${ticket.customerId}`);
+                          }}
+                          href="#"
+                          style={{
+                            color: '#007EB9',
+                            textDecoration: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {ticket.customerId.slice(0, 8)}
+                        </a>
+                      ) : (
+                        'N/A'
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {assignedAgent ? (
+                        <Badge variation="info">
+                          {assignedAgent.name}
+                        </Badge>
+                      ) : (
+                        <Badge variation="warning">
+                          Unassigned
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(ticket.createdAt || "").toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="small"
+                        onClick={() => router.push(ticketUrl)}
+                      >
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </View>

@@ -1,33 +1,102 @@
+.tabContainer {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.tabContainer:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.16);
+}
+
+.tabContainer button {
+  background-color: transparent;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  height: 100%;
+}
+
+.tabContainer button:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.activeTab {
+  background-color: #E91E63 !important; /* Material Design Pink */
+  color: white !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-1px);
+  width: 100%;
+  height: 100%;
+}
+
+.tabContainer button.activeTab:hover {
+  background-color: #F06292 !important; /* Lighter Material Design Pink */
+}
+
 .closeButton {
   cursor: pointer;
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: background-color 0.2s;
+  background-color: rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
-  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .closeButton:hover {
-  background-color: rgba(0, 0, 0, 0.15);
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
-.activeTab {
-  background-color: rgba(255, 255, 255, 0.8);
+.closeButton.activeTab {
+  background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
-.activeTab:hover {
-  background-color: rgba(0, 0, 0, 0.15);
+.closeButton.activeTab:hover {
+  background-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 .closeButton span {
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 500;
   line-height: 1;
+}
+
+.scrollButton {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scrollButton:hover {
+  background-color: #f5f5f5;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.tabsContainer {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabsContainer::-webkit-scrollbar {
+  display: none;
 } 

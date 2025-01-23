@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, useTheme, Flex, Button, Text, View } from '@aws-amplify/ui-react';
 import { useRouter, usePathname } from 'next/navigation';
 import styles from './EmployeeTabs.module.css';
@@ -23,6 +23,9 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
   const { tokens } = useTheme();
   const [dynamicTabs, setDynamicTabs] = useState<TabConfig[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Load saved tabs and handle initial route
   useEffect(() => {
@@ -77,6 +80,9 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
     if (!isInitialized) return;
 
     const ticketMatch = pathname.match(/^\/protected\/tickets\/(.+)$/);
+    const customerMatch = pathname.match(/^\/protected\/customers\/(.+)$/);
+    const agentMatch = pathname.match(/^\/protected\/agents\/(.+)$/);
+
     if (ticketMatch) {
       const ticketId = ticketMatch[1];
       const existingTab = dynamicTabs.find(tab => {
@@ -97,8 +103,48 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
         };
         setDynamicTabs(prev => [...prev, newTab]);
       }
+    } else if (customerMatch) {
+      const customerId = customerMatch[1];
+      const existingTab = dynamicTabs.find(tab => {
+        const tabCustomerMatch = tab.value.match(/^\/protected\/customers\/(.+)$/);
+        return tabCustomerMatch && tabCustomerMatch[1] === customerId;
+      });
+
+      if (!existingTab) {
+        const newTab: TabConfig = {
+          label: `Customer #${customerId}`,
+          value: pathname,
+          access: ['ADMIN', 'SUPER', 'AGENT'],
+          isDynamic: true,
+          onClose: () => {
+            setDynamicTabs(prev => prev.filter(t => t.value !== pathname));
+            router.push('/protected/employee/agent-dashboard');
+          }
+        };
+        setDynamicTabs(prev => [...prev, newTab]);
+      }
+    } else if (agentMatch) {
+      const agentId = agentMatch[1];
+      const existingTab = dynamicTabs.find(tab => {
+        const tabAgentMatch = tab.value.match(/^\/protected\/agents\/(.+)$/);
+        return tabAgentMatch && tabAgentMatch[1] === agentId;
+      });
+
+      if (!existingTab) {
+        const newTab: TabConfig = {
+          label: `Agent Profile`,
+          value: pathname,
+          access: ['ADMIN', 'SUPER', 'AGENT'],
+          isDynamic: true,
+          onClose: () => {
+            setDynamicTabs(prev => prev.filter(t => t.value !== pathname));
+            router.push('/protected/employee/agent-dashboard');
+          }
+        };
+        setDynamicTabs(prev => [...prev, newTab]);
+      }
     }
-  }, [pathname, isInitialized]);
+  }, [pathname, dynamicTabs, isInitialized, router]);
 
   // Define static tab routes and their access permissions
   const staticTabs: TabConfig[] = [
@@ -146,66 +192,136 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
     ...dynamicTabs
   ];
 
+  const checkScrollButtons = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth);
+    }
+  };
+
+  useEffect(() => {
+    checkScrollButtons();
+    window.addEventListener('resize', checkScrollButtons);
+    return () => window.removeEventListener('resize', checkScrollButtons);
+  }, [dynamicTabs]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 200;
+      const newScrollLeft = scrollContainerRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+      scrollContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <Flex 
-      gap={tokens.space.medium} 
       width="100%"
+      position="relative"
+      alignItems="center"
     >
-      {allTabs.map((tab) => (
-        <Flex 
-          key={tab.value} 
-          alignItems="center"
-          style={{
-            maxWidth: 'calc(15vw - 16px)',
-            minWidth: '120px',
-            position: 'relative'
-          }}
+      {showLeftArrow && (
+        <View
+          className={styles.scrollButton}
+          onClick={() => scroll('left')}
+          style={{ left: 0 }}
         >
-          <Button
-            onClick={() => handleTabClick(tab.value)}
-            variation={pathname === tab.value ? "primary" : "link"}
+          <Text fontSize="1.2rem">‹</Text>
+        </View>
+      )}
+      
+      <Flex 
+        ref={scrollContainerRef}
+        gap={tokens.space.medium} 
+        padding={tokens.space.small}
+        className={styles.tabsContainer}
+        style={{
+          overflowX: 'auto',
+          position: 'relative',
+          width: '100%'
+        }}
+        onScroll={checkScrollButtons}
+      >
+        {allTabs.map((tab) => (
+          <Flex 
+            key={tab.value} 
+            alignItems="center"
+            className={styles.tabContainer}
             style={{
-              maxWidth: '100%',
-              minHeight: '48px',
-              whiteSpace: 'normal',
-              display: 'flex',
-              alignItems: 'center',
-              textAlign: 'center',
-              lineHeight: '1.2',
-              padding: '8px 32px 8px 12px',
-              flex: 1
+              maxWidth: 'calc(15vw - 16px)',
+              minWidth: '140px',
+              position: 'relative',
+              flex: '0 0 auto'
             }}
           >
-            <Text
+            <Button
+              onClick={() => handleTabClick(tab.value)}
+              variation="link"
+              className={pathname === tab.value ? styles.activeTab : ''}
               style={{
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                maxWidth: '100%',
+                minHeight: '48px',
+                whiteSpace: 'normal',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                lineHeight: '1.2',
+                padding: '12px 36px 12px 16px',
+                flex: 1,
+                borderRadius: '8px',
+                fontWeight: 500,
                 width: '100%'
               }}
             >
-              {tab.label}
-            </Text>
-          </Button>
-          {tab.isDynamic && (
-            <View
-              className={`${styles.closeButton} ${pathname === tab.value ? styles.activeTab : ''}`}
-              onClick={(e) => handleCloseTab(tab, e)}
-            >
               <Text
-                as="span"
-                color={tokens.colors.font.secondary}
-                fontSize="14px"
-                fontWeight={tokens.fontWeights.bold}
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  width: '100%',
+                  color: pathname === tab.value ? '#FFFFFF' : '#333333',
+                  fontSize: '14px',
+                  minHeight: '1.2em',
+                  lineHeight: '1.2'
+                }}
               >
-                ×
+                {tab.label}
               </Text>
-            </View>
-          )}
-        </Flex>
-      ))}
+            </Button>
+            {tab.isDynamic && (
+              <View
+                className={`${styles.closeButton} ${pathname === tab.value ? styles.activeTab : ''}`}
+                onClick={(e) => handleCloseTab(tab, e)}
+              >
+                <Text
+                  as="span"
+                  style={{
+                    color: pathname === tab.value ? '#FFFFFF' : '#666666'
+                  }}
+                >
+                  ×
+                </Text>
+              </View>
+            )}
+          </Flex>
+        ))}
+      </Flex>
+
+      {showRightArrow && (
+        <View
+          className={styles.scrollButton}
+          onClick={() => scroll('right')}
+          style={{ right: 0 }}
+        >
+          <Text fontSize="1.2rem">›</Text>
+        </View>
+      )}
     </Flex>
   );
 } 

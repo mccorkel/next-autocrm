@@ -139,6 +139,7 @@ export default function CustomerManagement() {
           <Table highlightOnHover={true}>
             <TableHead>
               <TableRow>
+                <TableCell as="th">ID</TableCell>
                 <TableCell as="th">Name</TableCell>
                 <TableCell as="th">Email</TableCell>
                 <TableCell as="th">Company</TableCell>
@@ -149,6 +150,22 @@ export default function CustomerManagement() {
             <TableBody>
               {customers.map((customer) => (
                 <TableRow key={customer.id}>
+                  <TableCell>
+                    <a 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push(`/protected/customers/${customer.id}`);
+                      }}
+                      href="#"
+                      style={{
+                        color: '#007EB9',
+                        textDecoration: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {customer.id?.slice(0, 8)}
+                    </a>
+                  </TableCell>
                   <TableCell>{customer.name}</TableCell>
                   <TableCell>{customer.email}</TableCell>
                   <TableCell>{customer.company}</TableCell>

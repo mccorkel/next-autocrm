@@ -10,10 +10,14 @@ import EmployeeTabs from '@/app/components/EmployeeTabs';
 import { Amplify } from 'aws-amplify';
 import outputs from "@/amplify_outputs.json";
 import { AuthUser } from '@aws-amplify/auth';
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/amplify/data/resource";
 
 // Configure Amplify
 console.log("Configuring Amplify with outputs:", outputs);
 Amplify.configure(outputs);
+
+const client = generateClient<Schema>();
 
 // Loading screen component
 function LoadingScreen() {
@@ -46,10 +50,42 @@ function ProtectedContent({
 }) {
   const router = useRouter();
   const { tokens } = useTheme();
+  const [agentId, setAgentId] = useState<string | null>(null);
+
+  // Fetch agent ID when user email is available
+  useEffect(() => {
+    async function fetchAgentId() {
+      if (user?.signInDetails?.loginId) {
+        try {
+          const agentsResponse = await client.models.Agent.list({
+            filter: {
+              email: {
+                eq: user.signInDetails.loginId
+              }
+            }
+          });
+          
+          if (agentsResponse.data && agentsResponse.data.length > 0) {
+            setAgentId(agentsResponse.data[0].id);
+          }
+        } catch (error) {
+          console.error('Error fetching agent ID:', error);
+        }
+      }
+    }
+    
+    fetchAgentId();
+  }, [user?.signInDetails?.loginId]);
 
   const handleSignOut = () => {
     if (authSignOut) {
       authSignOut();
+    }
+  };
+
+  const handleEmailClick = () => {
+    if (agentId) {
+      router.push(`/protected/agents/${agentId}`);
     }
   };
 
@@ -88,23 +124,60 @@ function ProtectedContent({
             zIndex: 10
           }}
         >
+          {/* Top Row - Navigation Buttons */}
           <Flex 
             width="100%" 
-            padding={tokens.space.medium}
+            padding={`${tokens.space.small} ${tokens.space.medium}`}
             justifyContent="space-between"
             alignItems="center"
             maxWidth="1400px"
             margin="0 auto"
+            style={{
+              borderBottom: `1px solid ${tokens.colors.border.secondary}`
+            }}
           >
-            <Flex alignItems="center" gap={tokens.space.large}>
-              <Button onClick={() => router.push("/")} variation="link">
-                Home
+            <View
+              as="a"
+              onClick={() => router.push("/")}
+              style={{
+                cursor: 'pointer',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <img 
+                src="/assets/logo.png" 
+                alt="AutoCRM Logo" 
+                style={{
+                  height: '100%',
+                  width: 'auto'
+                }}
+              />
+            </View>
+            <Flex gap={tokens.space.medium} alignItems="center">
+              <Button
+                onClick={handleEmailClick}
+                variation="link"
+                size="small"
+                isDisabled={!agentId}
+              >
+                {user?.signInDetails?.loginId}
               </Button>
-              <EmployeeTabs userGroups={userGroups} />
+              <Button onClick={handleSignOut} variation="primary">
+                Sign Out
+              </Button>
             </Flex>
-            <Button onClick={handleSignOut} variation="primary">
-              Sign Out
-            </Button>
+          </Flex>
+
+          {/* Bottom Row - Tabs */}
+          <Flex 
+            width="100%" 
+            padding={tokens.space.medium}
+            maxWidth="1400px"
+            margin="0 auto"
+          >
+            <EmployeeTabs userGroups={userGroups} />
           </Flex>
         </View>
       )}
