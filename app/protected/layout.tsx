@@ -51,6 +51,20 @@ function ProtectedContent({
   const router = useRouter();
   const { tokens } = useTheme();
   const [agentId, setAgentId] = useState<string | null>(null);
+  const [agents, setAgents] = useState<Schema["Agent"]["type"][]>([]);
+
+  // Fetch agents when component mounts
+  useEffect(() => {
+    async function fetchAgents() {
+      try {
+        const { data } = await client.models.Agent.list();
+        setAgents(data);
+      } catch (error) {
+        console.error('Error fetching agents:', error);
+      }
+    }
+    fetchAgents();
+  }, []);
 
   // Fetch agent ID when user email is available
   useEffect(() => {
@@ -177,7 +191,11 @@ function ProtectedContent({
             maxWidth="1400px"
             margin="0 auto"
           >
-            <EmployeeTabs userGroups={userGroups} />
+            <EmployeeTabs 
+              userGroups={userGroups} 
+              agents={agents} 
+              user={user}
+            />
           </Flex>
         </View>
       )}

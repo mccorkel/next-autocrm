@@ -5,6 +5,8 @@ import styles from './EmployeeTabs.module.css';
 
 interface EmployeeTabsProps {
   userGroups: string[];
+  agents: any[];
+  user: any;
 }
 
 interface TabConfig {
@@ -17,7 +19,7 @@ interface TabConfig {
 
 const STORAGE_KEY = 'autocrm_open_ticket_tabs';
 
-export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
+export default function EmployeeTabs({ userGroups, agents, user }: EmployeeTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { tokens } = useTheme();
@@ -131,8 +133,13 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
       });
 
       if (!existingTab) {
+        // Find the agent details to get their email
+        const agent = agents.find(agent => agent.id === agentId);
+        const isCurrentUserProfile = agent?.email === user?.signInDetails?.loginId;
+        
         const newTab: TabConfig = {
-          label: `Agent Profile`,
+          label: isCurrentUserProfile ? 'My Profile' : 
+            `Agent ${agent?.email ? agent.email : 'Unknown'}`,
           value: pathname,
           access: ['ADMIN', 'SUPER', 'AGENT'],
           isDynamic: true,
@@ -144,7 +151,7 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
         setDynamicTabs(prev => [...prev, newTab]);
       }
     }
-  }, [pathname, dynamicTabs, isInitialized, router]);
+  }, [pathname, dynamicTabs, isInitialized, router, agents, user?.signInDetails?.loginId]);
 
   // Define static tab routes and their access permissions
   const staticTabs: TabConfig[] = [
@@ -290,9 +297,8 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
                   minHeight: '1.2em',
                   lineHeight: '1.2'
                 }}
-              >
-                {tab.label}
-              </Text>
+                dangerouslySetInnerHTML={{ __html: tab.label }}
+              />
             </Button>
             {tab.isDynamic && (
               <View

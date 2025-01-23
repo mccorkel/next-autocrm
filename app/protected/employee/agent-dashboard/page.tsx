@@ -235,9 +235,20 @@ export default function AgentDashboard() {
                     </TableCell>
                     <TableCell>
                       {assignedAgent ? (
-                        <Badge variation="info">
-                          {assignedAgent.name}
-                        </Badge>
+                        <a 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            router.push(`/protected/agents/${assignedAgent.id}`);
+                          }}
+                          href="#"
+                          style={{
+                            color: '#007EB9',
+                            textDecoration: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {assignedAgent.email}
+                        </a>
                       ) : (
                         <Badge variation="warning">
                           Unassigned
