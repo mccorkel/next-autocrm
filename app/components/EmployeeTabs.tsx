@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button, Flex, Text, View, useTheme } from '@aws-amplify/ui-react';
 import { useTabContext } from '@/app/contexts/TabContext';
+import { useAgent } from '@/app/contexts/AgentContext';
 import styles from './EmployeeTabs.module.css';
 
 interface Tab {
@@ -19,25 +20,11 @@ export default function EmployeeTabs({ userGroups }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const { tokens } = useTheme();
+  const { currentAgentId } = useAgent();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
   const { state: tabState, updateTabData, removeTab, cacheComponent, getCachedComponent } = useTabContext();
-
-  // Effect to update tab data when route changes
-  useEffect(() => {
-    const ticketMatch = pathname.match(/^\/protected\/tickets\/(.+)$/);
-    const customerMatch = pathname.match(/^\/protected\/customers\/(.+)$/);
-    const agentMatch = pathname.match(/^\/protected\/agents\/(.+)$/);
-
-    if (ticketMatch) {
-      updateTabData(pathname, { label: `Ticket #${ticketMatch[1]}` });
-    } else if (customerMatch) {
-      updateTabData(pathname, { label: `Customer #${customerMatch[1]}` });
-    } else if (agentMatch) {
-      updateTabData(pathname, { label: `Agent #${agentMatch[1]}` });
-    }
-  }, [pathname, updateTabData]);
 
   // Static tabs based on user groups
   const staticTabs = [
@@ -52,10 +39,12 @@ export default function EmployeeTabs({ userGroups }: Props) {
   ];
 
   // Dynamic tabs from context
-  const dynamicTabs = Object.entries(tabState).map(([path, { data }]) => ({
-    label: data.label,
-    value: path
-  }));
+  const dynamicTabs = Object.entries(tabState)
+    .filter(([_, { data }]) => data && data.label) // Filter out entries without valid data
+    .map(([path, { data }]) => ({
+      label: data.label,
+      value: path
+    }));
 
   const allTabs = [...staticTabs, ...dynamicTabs];
 
@@ -104,6 +93,25 @@ export default function EmployeeTabs({ userGroups }: Props) {
     }
   };
 
+  // Effect to update tab data when route changes
+  useEffect(() => {
+    // Only update tab data for dynamic routes
+    const ticketMatch = pathname.match(/^\/protected\/tickets\/(.+)$/);
+    const customerMatch = pathname.match(/^\/protected\/customers\/(.+)$/);
+    const agentMatch = pathname.match(/^\/protected\/agents\/(.+)$/);
+
+    if (ticketMatch) {
+      updateTabData(pathname, { label: `Ticket #${ticketMatch[1]}` });
+    } else if (customerMatch) {
+      updateTabData(pathname, { label: `Customer #${customerMatch[1]}` });
+    } else if (agentMatch) {
+      const agentId = agentMatch[1];
+      const label = currentAgentId === agentId ? 'My Profile' : `Agent #${agentId}`;
+      updateTabData(pathname, { label });
+    }
+    // Remove the static tab handling since they're already in staticTabs
+  }, [pathname, updateTabData, currentAgentId]);
+
   return (
     <View width="100%" position="relative">
       {showLeftArrow && (
@@ -127,7 +135,7 @@ export default function EmployeeTabs({ userGroups }: Props) {
             onClick={() => handleTabClick(tab)}
             className={`${styles.tabContainer} ${pathname === tab.value ? styles.activeTab : ''}`}
           >
-            <Text>{tab.label}</Text>
+            <Text className={styles.tabText}>{tab.label}</Text>
             {!staticTabs.some(staticTab => staticTab.value === tab.value) && (
               <View
                 onClick={(e) => handleCloseTab(e, tab)}

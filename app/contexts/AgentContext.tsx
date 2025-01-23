@@ -1,95 +1,99 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { generateClient } from 'aws-amplify/api';
-import { Schema } from '@/amplify/data/resource';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/amplify/data/resource";
+import { checkAndCreateAgent } from "@/app/utils/agent";
+import { Amplify } from "aws-amplify";
+import { fetchAuthSession } from 'aws-amplify/auth';
 
-type AgentData = {
-  id: string;
-  email: string;
-  name: string;
-  status: 'AVAILABLE' | 'BUSY' | 'OFFLINE';
-  maxConcurrentTickets: number;
-  assignedCategories: string[];
-  supervisorId?: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
+const client = generateClient<Schema>();
 
 type AgentContextType = {
+  currentAgentId: string | null;
   isInitialized: boolean;
-  currentAgent: AgentData | null;
-  initializeAgent: (email: string, name: string) => Promise<void>;
+  isLoading: boolean;
+  error: string | null;
 };
 
 const AgentContext = createContext<AgentContextType | undefined>(undefined);
 
-let initializationPromise: Promise<void> | null = null;
-
 export function AgentProvider({ children }: { children: ReactNode }) {
+  const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [currentAgent, setCurrentAgent] = useState<AgentData | null>(null);
-  const client = generateClient<Schema>();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAmplifyConfigured, setIsAmplifyConfigured] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const initializeAgent = useCallback(async (email: string, name: string) => {
-    if (initializationPromise) {
-      return initializationPromise;
+  // Wait for Amplify configuration
+  useEffect(() => {
+    const checkAmplifyConfig = () => {
+      try {
+        const config = Amplify.getConfig();
+        if (config) {
+          setIsAmplifyConfigured(true);
+        }
+      } catch (error) {
+        setTimeout(checkAmplifyConfig, 100);
+      }
+    };
+    checkAmplifyConfig();
+  }, []);
+
+  // Check authentication status
+  useEffect(() => {
+    if (!isAmplifyConfigured) return;
+
+    async function checkAuth() {
+      try {
+        const session = await fetchAuthSession();
+        setIsAuthenticated(!!session.tokens?.accessToken);
+      } catch (error) {
+        setIsAuthenticated(false);
+      }
     }
 
-    initializationPromise = (async () => {
-      try {
-        console.log('User attributes:', email, name);
-        
-        // Query existing agents
-        const existingAgentsResponse = await client.models.Agent.list({
-          filter: {
-            email: { eq: email }
-          }
-        });
-        console.log('Existing agents query result:', existingAgentsResponse.data);
+    checkAuth();
+  }, [isAmplifyConfigured]);
 
-        // If agent exists, use it
-        if (existingAgentsResponse.data && existingAgentsResponse.data.length > 0) {
-          const agent = existingAgentsResponse.data[0];
-          setCurrentAgent(agent as unknown as AgentData);
-          setIsInitialized(true);
+  useEffect(() => {
+    if (!isAmplifyConfigured || !isAuthenticated) return;
+
+    async function initializeAgent() {
+      try {
+        setIsLoading(true);
+        const agentId = await checkAndCreateAgent();
+        if (!agentId) {
+          setError('Failed to get agent ID');
+          setCurrentAgentId(null);
           return;
         }
-
-        // If no agent exists, create one
-        const newAgentData = {
-          email,
-          name,
-          status: 'AVAILABLE' as const,
-          maxConcurrentTickets: 5,
-          assignedCategories: []
-        };
-        console.log('No existing agent found, attempting to create new agent with data:', newAgentData);
-
-        const createResponse = await client.models.Agent.create(newAgentData);
-        console.log('Create agent API response:', createResponse);
-
-        if (createResponse.data) {
-          console.log('Created new agent:', createResponse.data);
-          setCurrentAgent(createResponse.data as unknown as AgentData);
-        }
         
+        setCurrentAgentId(agentId);
         setIsInitialized(true);
+        setError(null);
       } catch (error) {
         console.error('Error initializing agent:', error);
-        setIsInitialized(true);
+        setError('Error initializing agent');
+        setCurrentAgentId(null);
+      } finally {
+        setIsLoading(false);
       }
-    })();
-
-    try {
-      await initializationPromise;
-    } finally {
-      initializationPromise = null;
     }
-  }, [client]);
+
+    initializeAgent();
+  }, [isAmplifyConfigured, isAuthenticated]);
 
   return (
-    <AgentContext.Provider value={{ isInitialized, currentAgent, initializeAgent }}>
+    <AgentContext.Provider 
+      value={{ 
+        currentAgentId,
+        isInitialized,
+        isLoading,
+        error
+      }}
+    >
       {children}
     </AgentContext.Provider>
   );

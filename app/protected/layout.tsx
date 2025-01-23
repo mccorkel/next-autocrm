@@ -2,17 +2,23 @@
 
 import AuthWrapper from "@/app/components/AuthWrapper";
 import { Button, Flex, View, useTheme, Loader, Text } from "@aws-amplify/ui-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "aws-amplify/auth";
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, memo } from 'react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import EmployeeTabs from '@/app/components/EmployeeTabs';
 import { AuthUser } from '@aws-amplify/auth';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
-import { TabProvider } from '@/app/contexts/TabContext';
+import { TabProvider, useTabContext } from '@/app/contexts/TabContext';
+import React from 'react';
 
 const client = generateClient<Schema>();
+
+// Create a memoized content component
+const MemoizedContent = memo(function MemoizedContent({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+});
 
 // Loading screen component
 function LoadingScreen() {
@@ -44,8 +50,10 @@ function ProtectedContent({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { tokens } = useTheme();
   const [agentId, setAgentId] = useState<string | null>(null);
+  const { cacheComponent, getCachedComponent } = useTabContext();
 
   // Fetch agent ID when user email is available
   useEffect(() => {
@@ -71,6 +79,16 @@ function ProtectedContent({
     
     fetchAgentId();
   }, [user?.signInDetails?.loginId]);
+
+  // Cache the current route's component when it changes
+  useEffect(() => {
+    const cachedComponent = getCachedComponent(pathname);
+    if (!cachedComponent) {
+      const memoizedContent = <MemoizedContent>{children}</MemoizedContent>;
+      // Use a stable reference for the component
+      cacheComponent(pathname, memoizedContent);
+    }
+  }, [pathname, cacheComponent, getCachedComponent]); // Remove children from dependencies
 
   const handleSignOut = () => {
     if (authSignOut) {
@@ -200,7 +218,7 @@ function ProtectedContent({
             minHeight: 0
           }}
         >
-          {children}
+          {getCachedComponent(pathname) || <MemoizedContent>{children}</MemoizedContent>}
         </View>
       </View>
     </View>

@@ -20,12 +20,14 @@ import {
   TableBody,
 } from "@aws-amplify/ui-react";
 import { useParams } from 'next/navigation';
+import { useAgent } from '@/app/contexts/AgentContext';
 
 const client = generateClient<Schema>();
 
 export default function AgentDetailsPage() {
   const { tokens } = useTheme();
   const params = useParams();
+  const { currentAgentId } = useAgent();
   const [agent, setAgent] = useState<any>(null);
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +97,9 @@ export default function AgentDetailsPage() {
     <Flex direction="column" gap={tokens.space.large}>
       <Card>
         <Flex direction="column" gap={tokens.space.medium}>
-          <Heading level={2}>Agent Profile</Heading>
+          <Heading level={2}>
+            {currentAgentId === params.id ? 'My Profile' : 'Agent Profile'}
+          </Heading>
           
           <Flex direction="column" gap={tokens.space.small}>
             <Text>
