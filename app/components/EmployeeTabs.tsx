@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, useTheme, Flex, Button } from '@aws-amplify/ui-react';
+import { Tabs, useTheme, Flex, Button, Text, View } from '@aws-amplify/ui-react';
 import { useRouter, usePathname } from 'next/navigation';
 import styles from './EmployeeTabs.module.css';
 
@@ -15,11 +15,90 @@ interface TabConfig {
   onClose?: () => void;
 }
 
+const STORAGE_KEY = 'autocrm_open_ticket_tabs';
+
 export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { tokens } = useTheme();
   const [dynamicTabs, setDynamicTabs] = useState<TabConfig[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Load saved tabs and handle initial route
+  useEffect(() => {
+    const savedTabs = localStorage.getItem(STORAGE_KEY);
+    let initialTabs: TabConfig[] = [];
+    
+    if (savedTabs) {
+      try {
+        initialTabs = JSON.parse(savedTabs) as TabConfig[];
+        setDynamicTabs(initialTabs);
+      } catch (error) {
+        console.error('Error loading saved tabs:', error);
+      }
+    }
+
+    // Handle initial route if it's a ticket page
+    const ticketMatch = pathname.match(/^\/protected\/tickets\/(.+)$/);
+    if (ticketMatch) {
+      const ticketId = ticketMatch[1];
+      const existingTab = initialTabs.find(tab => {
+        const tabTicketMatch = tab.value.match(/^\/protected\/tickets\/(.+)$/);
+        return tabTicketMatch && tabTicketMatch[1] === ticketId;
+      });
+
+      if (!existingTab) {
+        const newTab: TabConfig = {
+          label: `Ticket #${ticketId}`,
+          value: pathname,
+          access: ['ADMIN', 'SUPER', 'AGENT'],
+          isDynamic: true,
+          onClose: () => {
+            setDynamicTabs(prev => prev.filter(t => t.value !== pathname));
+            router.push('/protected/employee/agent-dashboard');
+          }
+        };
+        setDynamicTabs([...initialTabs, newTab]);
+      }
+    }
+    
+    setIsInitialized(true);
+  }, []); // Run only once on mount
+
+  // Save tabs whenever they change
+  useEffect(() => {
+    if (isInitialized) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dynamicTabs));
+    }
+  }, [dynamicTabs, isInitialized]);
+
+  // Handle route changes after initial load
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const ticketMatch = pathname.match(/^\/protected\/tickets\/(.+)$/);
+    if (ticketMatch) {
+      const ticketId = ticketMatch[1];
+      const existingTab = dynamicTabs.find(tab => {
+        const tabTicketMatch = tab.value.match(/^\/protected\/tickets\/(.+)$/);
+        return tabTicketMatch && tabTicketMatch[1] === ticketId;
+      });
+
+      if (!existingTab) {
+        const newTab: TabConfig = {
+          label: `Ticket #${ticketId}`,
+          value: pathname,
+          access: ['ADMIN', 'SUPER', 'AGENT'],
+          isDynamic: true,
+          onClose: () => {
+            setDynamicTabs(prev => prev.filter(t => t.value !== pathname));
+            router.push('/protected/employee/agent-dashboard');
+          }
+        };
+        setDynamicTabs(prev => [...prev, newTab]);
+      }
+    }
+  }, [pathname, isInitialized]);
 
   // Define static tab routes and their access permissions
   const staticTabs: TabConfig[] = [
@@ -45,46 +124,8 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
     },
   ];
 
-  // Check if current path is a ticket detail page
-  useEffect(() => {
-    const ticketMatch = pathname.match(/^\/protected\/tickets\/(.+)$/);
-    if (ticketMatch) {
-      const ticketId = ticketMatch[1];
-      const existingTab = dynamicTabs.find(tab => tab.value.includes(`/protected/tickets/${ticketId}`));
-      
-      if (existingTab) {
-        // If tab already exists, navigate to it
-        router.push(existingTab.value);
-      } else {
-        // Create new tab only if it doesn't exist
-        const newTab: TabConfig = {
-          label: `Ticket #${ticketId}`,
-          value: pathname,
-          access: ['ADMIN', 'SUPER', 'AGENT'],
-          isDynamic: true,
-          onClose: () => {
-            setDynamicTabs(prev => prev.filter(t => t.value === pathname ? false : true));
-            router.push('/protected/employee/agent-dashboard');
-          }
-        };
-        setDynamicTabs(prev => [...prev, newTab]);
-      }
-    }
-  }, [pathname, dynamicTabs]);
-
   // Function to handle tab navigation
   const handleTabClick = (tabValue: string) => {
-    // If it's a ticket detail tab, check if it already exists
-    const ticketMatch = tabValue.match(/^\/protected\/tickets\/(.+)$/);
-    if (ticketMatch) {
-      const ticketId = ticketMatch[1];
-      const existingTab = dynamicTabs.find(tab => tab.value.includes(`/protected/tickets/${ticketId}`));
-      
-      if (existingTab) {
-        router.push(existingTab.value);
-        return;
-      }
-    }
     router.push(tabValue);
   };
 
@@ -92,7 +133,11 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
   const handleCloseTab = (tab: TabConfig, e: React.MouseEvent) => {
     e.stopPropagation();
     setDynamicTabs(prev => prev.filter(t => t.value !== tab.value));
-    router.push('/protected/employee/agent-dashboard');
+    
+    // Only navigate if we're closing the current tab
+    if (pathname === tab.value) {
+      router.push('/protected/employee/agent-dashboard');
+    }
   };
 
   // Combine static and dynamic tabs
@@ -102,26 +147,64 @@ export default function EmployeeTabs({ userGroups }: EmployeeTabsProps) {
   ];
 
   return (
-    <Flex gap={tokens.space.medium}>
+    <Flex 
+      gap={tokens.space.medium} 
+      width="100%"
+    >
       {allTabs.map((tab) => (
-        <Button
-          key={tab.value}
-          onClick={() => handleTabClick(tab.value)}
-          variation={pathname === tab.value ? "primary" : "link"}
+        <Flex 
+          key={tab.value} 
+          alignItems="center"
+          style={{
+            maxWidth: 'calc(15vw - 16px)',
+            minWidth: '120px',
+            position: 'relative'
+          }}
         >
-          <Flex alignItems="center" gap={tokens.space.xs}>
-            {tab.label}
-            {tab.isDynamic && (
-              <Button
-                size="small"
-                variation="link"
-                onClick={(e) => handleCloseTab(tab, e)}
+          <Button
+            onClick={() => handleTabClick(tab.value)}
+            variation={pathname === tab.value ? "primary" : "link"}
+            style={{
+              maxWidth: '100%',
+              minHeight: '48px',
+              whiteSpace: 'normal',
+              display: 'flex',
+              alignItems: 'center',
+              textAlign: 'center',
+              lineHeight: '1.2',
+              padding: '8px 32px 8px 12px',
+              flex: 1
+            }}
+          >
+            <Text
+              style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                width: '100%'
+              }}
+            >
+              {tab.label}
+            </Text>
+          </Button>
+          {tab.isDynamic && (
+            <View
+              className={`${styles.closeButton} ${pathname === tab.value ? styles.activeTab : ''}`}
+              onClick={(e) => handleCloseTab(tab, e)}
+            >
+              <Text
+                as="span"
+                color={tokens.colors.font.secondary}
+                fontSize="14px"
+                fontWeight={tokens.fontWeights.bold}
               >
-                ✕
-              </Button>
-            )}
-          </Flex>
-        </Button>
+                ×
+              </Text>
+            </View>
+          )}
+        </Flex>
       ))}
     </Flex>
   );
