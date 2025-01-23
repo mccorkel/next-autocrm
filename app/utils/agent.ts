@@ -5,14 +5,7 @@ import { type AuthUser } from '@aws-amplify/auth';
 
 const client = generateClient<Schema>();
 
-// Global initialization tracking
-let hasInitialized = false;
-
 export async function checkAndCreateAgent() {
-  if (hasInitialized) {
-    return null;
-  }
-
   try {
     const session = await fetchAuthSession();
     const currentUser = await getCurrentUser();
@@ -38,7 +31,6 @@ export async function checkAndCreateAgent() {
     if (existingAgentsResponse.data && existingAgentsResponse.data.length > 0) {
       const existingAgent = existingAgentsResponse.data[0];
       console.log('Found existing agent:', existingAgent);
-      hasInitialized = true;
       return existingAgent.id;
     } else {
       // Create new agent
@@ -57,12 +49,10 @@ export async function checkAndCreateAgent() {
       
       if (createResponse.data) {
         console.log('Created new agent:', createResponse.data);
-        hasInitialized = true;
         return createResponse.data.id;
       }
     }
-    
-    hasInitialized = true;
+
     return null;
   } catch (error) {
     console.error('Error in checkAndCreateAgent:', error);

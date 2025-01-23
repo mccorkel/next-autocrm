@@ -7,11 +7,10 @@ import { signOut } from "aws-amplify/auth";
 import { useEffect, useState, useCallback } from 'react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import EmployeeTabs from '@/app/components/EmployeeTabs';
-import { Amplify } from 'aws-amplify';
-import outputs from "@/amplify_outputs.json";
 import { AuthUser } from '@aws-amplify/auth';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
+import { TabProvider } from '@/app/contexts/TabContext';
 
 const client = generateClient<Schema>();
 
@@ -47,20 +46,6 @@ function ProtectedContent({
   const router = useRouter();
   const { tokens } = useTheme();
   const [agentId, setAgentId] = useState<string | null>(null);
-  const [agents, setAgents] = useState<Schema["Agent"]["type"][]>([]);
-
-  // Fetch agents when component mounts
-  useEffect(() => {
-    async function fetchAgents() {
-      try {
-        const { data } = await client.models.Agent.list();
-        setAgents(data);
-      } catch (error) {
-        console.error('Error fetching agents:', error);
-      }
-    }
-    fetchAgents();
-  }, []);
 
   // Fetch agent ID when user email is available
   useEffect(() => {
@@ -189,8 +174,6 @@ function ProtectedContent({
           >
             <EmployeeTabs 
               userGroups={userGroups} 
-              agents={agents} 
-              user={user}
             />
           </Flex>
         </View>
@@ -281,32 +264,16 @@ export default function ProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Initialize Amplify
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialized(true);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!isInitialized) {
-    return (
-      <AuthWrapper>
-        {() => <LoadingScreen />}
-      </AuthWrapper>
-    );
-  }
-
   return (
     <AuthWrapper>
       {({ user, signOut: authSignOut }) => (
-        <AuthContent
-          user={user}
-          signOut={authSignOut}
-          children={children}
-        />
+        <TabProvider>
+          <AuthContent
+            user={user}
+            signOut={authSignOut}
+            children={children}
+          />
+        </TabProvider>
       )}
     </AuthWrapper>
   );

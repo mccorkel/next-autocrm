@@ -63,30 +63,48 @@ export default function AgentDashboard() {
 
     async function initializeAgent() {
       try {
+        // Check if we already have an agent ID
+        if (currentAgentId) {
+          setIsAgentInitialized(true);
+          return;
+        }
+
         const agentId = await checkAndCreateAgent();
-        if (agentId) {
-          setCurrentAgentId(agentId);
+        if (!agentId) {
+          console.error('Failed to get agent ID');
+          setCurrentAgentId(null);
+          setIsAgentInitialized(false);
+          return;
         }
 
         // Get user groups
         const session = await fetchAuthSession();
         const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] || [];
+        
+        // Update states with new data
+        console.log('Setting current agent ID:', agentId);
+        setCurrentAgentId(agentId);
         setUserGroups(groups);
         setIsAgentInitialized(true);
       } catch (error) {
         console.error('Error initializing agent:', error);
+        setIsAgentInitialized(false);
+        setCurrentAgentId(null);
       }
     }
+    
     initializeAgent();
-  }, [isAmplifyConfigured]);
+  }, [isAmplifyConfigured, currentAgentId]);
 
   useEffect(() => {
-    if (!isAmplifyConfigured) return;
+    if (!isAmplifyConfigured || !isAgentInitialized || !currentAgentId) return;
+    console.log('Fetching data with agent ID:', currentAgentId);
     fetchTickets();
     fetchAgents();
-  }, [statusFilter, isAmplifyConfigured]);
+  }, [statusFilter, isAmplifyConfigured, isAgentInitialized, currentAgentId]);
 
   async function fetchAgents() {
+    if (!isAgentInitialized || !currentAgentId) return;
     try {
       const { data } = await client.models.Agent.list();
       setAgents(data);
@@ -96,6 +114,7 @@ export default function AgentDashboard() {
   }
 
   async function fetchTickets() {
+    if (!isAgentInitialized || !currentAgentId) return;
     try {
       const filter = statusFilter !== "all" 
         ? { status: { eq: statusFilter } }
