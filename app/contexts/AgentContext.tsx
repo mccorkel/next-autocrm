@@ -1,11 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import { checkAndCreateAgent } from "@/app/utils/agent";
 import { Amplify } from "aws-amplify";
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { Hub as AuthHub } from '@aws-amplify/core';
 
 const client = generateClient<Schema>();
 
@@ -14,6 +15,7 @@ type AgentContextType = {
   isInitialized: boolean;
   isLoading: boolean;
   error: string | null;
+  reset: () => void;
 };
 
 const AgentContext = createContext<AgentContextType | undefined>(undefined);
@@ -25,59 +27,117 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isAmplifyConfigured, setIsAmplifyConfigured] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const initializationAttempts = useRef(0);
+  const maxAttempts = 3;
 
-  // Wait for Amplify configuration
-  useEffect(() => {
-    const checkAmplifyConfig = () => {
-      try {
-        const config = Amplify.getConfig();
-        if (config) {
-          setIsAmplifyConfigured(true);
-        }
-      } catch (error) {
-        setTimeout(checkAmplifyConfig, 100);
-      }
-    };
-    checkAmplifyConfig();
+  const reset = useCallback(() => {
+    console.log('Resetting AgentContext state');
+    setCurrentAgentId(null);
+    setIsInitialized(false);
+    setIsLoading(true);
+    setError(null);
+    setIsAmplifyConfigured(false);
+    setIsAuthenticated(false);
+    initializationAttempts.current = 0;
   }, []);
 
-  // Check authentication status
+  // Authentication and configuration check
   useEffect(() => {
-    if (!isAmplifyConfigured) return;
-
-    async function checkAuth() {
+    async function checkAuthAndConfig() {
       try {
+        console.log('Checking authentication and Amplify configuration');
         const session = await fetchAuthSession();
-        setIsAuthenticated(!!session.tokens?.accessToken);
+        const isAuth = !!session.tokens?.accessToken;
+        
+        if (!isAuth) {
+          console.log('No valid auth session found, resetting state');
+          reset();
+          return;
+        }
+
+        try {
+          const config = Amplify.getConfig();
+          if (config) {
+            console.log('Auth session and Amplify configuration verified');
+            setIsAuthenticated(true);
+            setIsAmplifyConfigured(true);
+          }
+        } catch (error) {
+          console.error('Amplify configuration error:', error);
+          reset();
+        }
       } catch (error) {
-        setIsAuthenticated(false);
+        console.error('Authentication check failed:', error);
+        reset();
       }
     }
 
-    checkAuth();
-  }, [isAmplifyConfigured]);
+    // Set up auth state change listener
+    const unsubscribe = AuthHub.listen('auth', ({ payload }: { payload: { event: string } }) => {
+      console.log('Auth event:', payload.event);
+      switch (payload.event) {
+        case 'signedIn':
+          checkAuthAndConfig();
+          break;
+        case 'signedOut':
+          reset();
+          break;
+        case 'tokenRefresh':
+        case 'tokenRefresh_failure':
+          checkAuthAndConfig();
+          break;
+      }
+    });
 
+    // Initial check
+    checkAuthAndConfig();
+
+    return () => {
+      unsubscribe();
+    };
+  }, []); // Run once on mount
+
+  // Initialize agent with retries
   useEffect(() => {
-    if (!isAmplifyConfigured || !isAuthenticated) return;
+    if (!isAmplifyConfigured || !isAuthenticated) {
+      console.log('Waiting for auth and config:', { isAmplifyConfigured, isAuthenticated });
+      return;
+    }
 
     async function initializeAgent() {
       try {
+        console.log(`Starting agent initialization (attempt ${initializationAttempts.current + 1}/${maxAttempts})`);
         setIsLoading(true);
         const agentId = await checkAndCreateAgent();
+        console.log('Agent initialization result:', { agentId });
+        
         if (!agentId) {
-          setError('Failed to get agent ID');
+          console.error('Failed to get agent ID');
+          if (initializationAttempts.current < maxAttempts) {
+            initializationAttempts.current++;
+            setTimeout(initializeAgent, 1000);
+            return;
+          }
+          setError(`Failed to get agent ID after ${maxAttempts} attempts`);
           setCurrentAgentId(null);
           return;
         }
         
+        console.log('Setting current agent ID in context:', agentId);
         setCurrentAgentId(agentId);
         setIsInitialized(true);
         setError(null);
+        setIsLoading(false);
+        initializationAttempts.current = 0;
       } catch (error) {
         console.error('Error initializing agent:', error);
-        setError('Error initializing agent');
+        if (initializationAttempts.current < maxAttempts) {
+          initializationAttempts.current++;
+          setTimeout(initializeAgent, 1000);
+          return;
+        }
+        setError(`Error initializing agent after ${maxAttempts} attempts`);
         setCurrentAgentId(null);
-      } finally {
         setIsLoading(false);
       }
     }
@@ -85,13 +145,27 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     initializeAgent();
   }, [isAmplifyConfigured, isAuthenticated]);
 
+  // Log context value changes
+  useEffect(() => {
+    console.log('AgentContext state updated:', {
+      currentAgentId,
+      isInitialized,
+      isLoading,
+      error,
+      isAuthenticated,
+      isAmplifyConfigured,
+      initializationAttempts: initializationAttempts.current
+    });
+  }, [currentAgentId, isInitialized, isLoading, error, isAuthenticated, isAmplifyConfigured]);
+
   return (
     <AgentContext.Provider 
       value={{ 
         currentAgentId,
         isInitialized,
         isLoading,
-        error
+        error,
+        reset
       }}
     >
       {children}

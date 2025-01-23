@@ -24,6 +24,7 @@ import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import { type AuthUser } from '@aws-amplify/auth';
 import { checkAndCreateAgent } from "@/app/utils/agent";
 import { Amplify } from "aws-amplify";
+import { useAgent } from "@/app/contexts/AgentContext";
 
 const client = generateClient<Schema>();
 
@@ -32,72 +33,56 @@ type BadgeVariation = "info" | "warning" | "error" | "success";
 export default function AgentDashboard() {
   const router = useRouter();
   const { tokens } = useTheme();
+  const { currentAgentId, isInitialized: isAgentInitialized, isLoading } = useAgent();
   const [tickets, setTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [agents, setAgents] = useState<Array<Schema["Agent"]["type"]>>([]);
   const [userGroups, setUserGroups] = useState<string[]>([]);
-  const [isAgentInitialized, setIsAgentInitialized] = useState(false);
   const [isAmplifyConfigured, setIsAmplifyConfigured] = useState(false);
-  const hasInitialized = useRef(false);
 
   // Wait for Amplify configuration
   useEffect(() => {
     const checkAmplifyConfig = () => {
       try {
-        // This will throw if Amplify is not configured
         const config = Amplify.getConfig();
         if (config) {
           setIsAmplifyConfigured(true);
         }
       } catch (error) {
-        // Retry after a short delay
         setTimeout(checkAmplifyConfig, 100);
       }
     };
     checkAmplifyConfig();
   }, []);
 
+  // Get user groups when Amplify is configured
   useEffect(() => {
     if (!isAmplifyConfigured) return;
 
-    async function initializeAgent() {
+    async function getUserGroups() {
       try {
-        // Check if we already have an agent ID
-        if (currentAgentId) {
-          setIsAgentInitialized(true);
-          return;
-        }
-
-        const agentId = await checkAndCreateAgent();
-        if (!agentId) {
-          console.error('Failed to get agent ID');
-          setCurrentAgentId(null);
-          setIsAgentInitialized(false);
-          return;
-        }
-
-        // Get user groups
         const session = await fetchAuthSession();
         const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] || [];
-        
-        // Update states with new data
-        console.log('Setting current agent ID:', agentId);
-        setCurrentAgentId(agentId);
         setUserGroups(groups);
-        setIsAgentInitialized(true);
       } catch (error) {
-        console.error('Error initializing agent:', error);
-        setIsAgentInitialized(false);
-        setCurrentAgentId(null);
+        console.error('Error getting user groups:', error);
       }
     }
     
-    initializeAgent();
-  }, [isAmplifyConfigured, currentAgentId]);
+    getUserGroups();
+  }, [isAmplifyConfigured]);
 
+  // Fetch data when agent is initialized
   useEffect(() => {
-    if (!isAmplifyConfigured || !isAgentInitialized || !currentAgentId) return;
+    if (!isAmplifyConfigured || !isAgentInitialized || !currentAgentId) {
+      console.log('Waiting for initialization:', {
+        isAmplifyConfigured,
+        isAgentInitialized,
+        currentAgentId
+      });
+      return;
+    }
+    
     console.log('Fetching data with agent ID:', currentAgentId);
     fetchTickets();
     fetchAgents();

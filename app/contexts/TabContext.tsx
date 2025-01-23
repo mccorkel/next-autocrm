@@ -13,7 +13,8 @@ interface TabState {
 type TabAction = 
   | { type: 'UPDATE_TAB_DATA'; path: string; data: any }
   | { type: 'CACHE_COMPONENT'; path: string; Component: React.ReactNode }
-  | { type: 'REMOVE_TAB'; path: string };
+  | { type: 'REMOVE_TAB'; path: string }
+  | { type: 'CLEAR_STATE' };
 
 const TabContext = createContext<{
   state: TabState;
@@ -21,6 +22,7 @@ const TabContext = createContext<{
   cacheComponent: (path: string, Component: React.ReactNode) => void;
   removeTab: (path: string) => void;
   getCachedComponent: (path: string) => React.ReactNode | undefined;
+  clearState: () => void;
 } | null>(null);
 
 function tabReducer(state: TabState, action: TabAction): TabState {
@@ -47,6 +49,8 @@ function tabReducer(state: TabState, action: TabAction): TabState {
       const newState = { ...state };
       delete newState[action.path];
       return newState;
+    case 'CLEAR_STATE':
+      return {};
     default:
       return state;
   }
@@ -71,14 +75,19 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
     return state[path]?.Component;
   }, [state]);
 
+  const clearState = useCallback(() => {
+    dispatch({ type: 'CLEAR_STATE' });
+  }, []);
+
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
     state,
     updateTabData,
     cacheComponent,
     removeTab,
-    getCachedComponent
-  }), [state, updateTabData, cacheComponent, removeTab, getCachedComponent]);
+    getCachedComponent,
+    clearState
+  }), [state, updateTabData, cacheComponent, removeTab, getCachedComponent, clearState]);
 
   return (
     <TabContext.Provider value={contextValue}>

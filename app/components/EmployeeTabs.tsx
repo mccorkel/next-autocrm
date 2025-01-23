@@ -20,11 +20,21 @@ export default function EmployeeTabs({ userGroups }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const { tokens } = useTheme();
-  const { currentAgentId } = useAgent();
+  const { currentAgentId, isInitialized, isLoading } = useAgent();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
   const { state: tabState, updateTabData, removeTab, cacheComponent, getCachedComponent } = useTabContext();
+
+  // Log agent context values when they change
+  useEffect(() => {
+    console.log('EmployeeTabs agent context:', {
+      currentAgentId,
+      isInitialized,
+      isLoading,
+      pathname
+    });
+  }, [currentAgentId, isInitialized, isLoading, pathname]);
 
   // Static tabs based on user groups
   const staticTabs = [
@@ -106,11 +116,26 @@ export default function EmployeeTabs({ userGroups }: Props) {
       updateTabData(pathname, { label: `Customer #${customerMatch[1]}` });
     } else if (agentMatch) {
       const agentId = agentMatch[1];
+      console.log('Agent tab opened:', {
+        pathname,
+        agentId,
+        currentAgentId,
+        isInitialized,
+        isLoading,
+        isMyProfile: currentAgentId === agentId
+      });
+      
       const label = currentAgentId === agentId ? 'My Profile' : `Agent #${agentId}`;
+      console.log('Setting agent tab label:', {
+        label,
+        reason: currentAgentId === agentId ? 'Current agent viewing their own profile' : 'Viewing another agent\'s profile',
+        currentAgentId,
+        agentId
+      });
+      
       updateTabData(pathname, { label });
     }
-    // Remove the static tab handling since they're already in staticTabs
-  }, [pathname, updateTabData, currentAgentId]);
+  }, [pathname, updateTabData, currentAgentId, isInitialized, isLoading]);
 
   return (
     <View width="100%" position="relative">

@@ -12,6 +12,7 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import { TabProvider, useTabContext } from '@/app/contexts/TabContext';
 import React from 'react';
+import { useAgent } from '@/app/contexts/AgentContext';
 
 const client = generateClient<Schema>();
 
@@ -52,8 +53,9 @@ function ProtectedContent({
   const router = useRouter();
   const pathname = usePathname();
   const { tokens } = useTheme();
+  const { cacheComponent, getCachedComponent, clearState } = useTabContext();
+  const { reset: resetAgent } = useAgent();
   const [agentId, setAgentId] = useState<string | null>(null);
-  const { cacheComponent, getCachedComponent } = useTabContext();
 
   // Fetch agent ID when user email is available
   useEffect(() => {
@@ -92,6 +94,9 @@ function ProtectedContent({
 
   const handleSignOut = () => {
     if (authSignOut) {
+      // Clear all application state
+      clearState();
+      resetAgent();
       authSignOut();
     }
   };
