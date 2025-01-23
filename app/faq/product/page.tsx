@@ -3,40 +3,21 @@
 import {
   Button,
   Card,
+  Accordion,
   Flex,
   Heading,
   Text,
   View,
   useTheme,
+  Link,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
-
-const productFaqs = [
-  {
-    question: "What features are included in each plan?",
-    answer: "Our plans include varying levels of features such as ticket management, knowledge base access, AI-powered responses, and analytics. Visit our pricing page for a detailed comparison of features across different plans.",
-  },
-  {
-    question: "Can I integrate with other tools?",
-    answer: "Yes, we offer integrations with popular tools including Slack, Microsoft Teams, Jira, and major email providers. Custom integrations are available for enterprise customers.",
-  },
-  {
-    question: "Is there a limit on the number of tickets?",
-    answer: "Each plan has different ticket volume limits. Basic plans include up to 1,000 tickets per month, while higher tiers offer unlimited tickets. Enterprise plans can be customized based on your needs.",
-  },
-  {
-    question: "What kind of support do you provide?",
-    answer: "We offer email support for all plans, with additional phone and priority support for higher tiers. Enterprise customers receive dedicated account management and 24/7 support.",
-  },
-  {
-    question: "Do you offer a trial period?",
-    answer: "Yes, we offer a 14-day free trial of our Professional plan with full access to all features. No credit card is required to start your trial.",
-  },
-];
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function ProductFAQPage() {
   const router = useRouter();
   const { tokens } = useTheme();
+  const { translations } = useLanguage();
 
   return (
     <View 
@@ -46,35 +27,42 @@ export default function ProductFAQPage() {
     >
       <Flex direction="column" gap={tokens.space.large}>
         <Flex justifyContent="space-between" alignItems="center">
-          <Heading level={1}>Product FAQ</Heading>
+          <Heading level={1}>{translations.faq.product.title}</Heading>
           <Button onClick={() => router.push("/")} variation="link">
-            Back to Home
+            {translations.common.back}
           </Button>
         </Flex>
 
-        <Flex direction="column" gap={tokens.space.medium}>
-          {productFaqs.map((faq, index) => (
-            <Card key={index} variation="outlined">
-              <Flex direction="column" gap={tokens.space.small}>
-                <Heading level={3}>{faq.question}</Heading>
-                <Text>{faq.answer}</Text>
-              </Flex>
-            </Card>
-          ))}
-        </Flex>
+        <Card>
+          <Flex direction="column" gap={tokens.space.medium}>
+            <Text>{translations.faq.product.description}</Text>
+            <Accordion.Container>
+              {translations.faq.product.items.map((faq, index) => (
+                <Accordion.Item key={index} value={`item-${index}`}>
+                  <Accordion.Trigger>
+                    <Text fontWeight="bold">{faq.question}</Text>
+                  </Accordion.Trigger>
+                  <Accordion.Content>
+                    <Text padding="10px">{faq.answer}</Text>
+                  </Accordion.Content>
+                </Accordion.Item>
+              ))}
+            </Accordion.Container>
+          </Flex>
+        </Card>
 
         <Card>
-          <Flex direction="column" alignItems="center" gap={tokens.space.medium}>
-            <Heading level={3}>Have more questions?</Heading>
-            <Text textAlign="center">
-              Our product specialists are ready to help you find the right solution for your needs.
+          <Flex direction="column" alignItems="center" textAlign="center" gap={tokens.space.medium}>
+            <Heading level={3}>{translations.faq.product.needHelp?.title}</Heading>
+            <Text>
+              {translations.faq.product.needHelp?.description}
             </Text>
-            <Button
-              variation="primary"
-              onClick={() => router.push("/contact")}
-            >
-              Contact Sales
-            </Button>
+            <Flex gap={tokens.space.medium}>
+              <Button onClick={() => router.push('/contact')}>
+                {translations.faq.product.needHelp?.contactButton}
+              </Button>
+              <Link href="mailto:sales@tigerpanda.tv">sales@tigerpanda.tv</Link>
+            </Flex>
           </Flex>
         </Card>
       </Flex>

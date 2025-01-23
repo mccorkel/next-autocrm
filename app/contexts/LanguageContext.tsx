@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { en } from '../translations/en';
 
 type Language = 'en' | 'es' | 'fr' | 'de' | 'ja';
@@ -15,41 +15,48 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+const isValidLanguage = (lang: string | null): lang is Language => {
+  return !!lang && ['en', 'es', 'fr', 'de', 'ja'].includes(lang);
+};
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [language, setLanguageState] = useState<Language>('en');
+  const [language, setLanguageState] = useState<Language>(() => {
+    // Initialize with URL param or localStorage value or default to 'en'
+    const urlLang = searchParams.get('lang');
+    if (isValidLanguage(urlLang)) return urlLang;
+    
+    const savedLang = typeof window !== 'undefined' ? localStorage.getItem('language') : null;
+    return isValidLanguage(savedLang) ? savedLang : 'en';
+  });
   const [translations, setTranslations] = useState<Translations>(en);
 
+  // Handle URL parameter changes
   useEffect(() => {
-    // Check URL parameter first, then localStorage
-    const urlLang = searchParams.get('lang') as Language;
-    const savedLang = localStorage.getItem('language') as Language;
-    
-    if (urlLang && ['en', 'es', 'fr', 'de', 'ja'].includes(urlLang)) {
+    const urlLang = searchParams.get('lang');
+    if (isValidLanguage(urlLang) && urlLang !== language) {
       setLanguageState(urlLang);
-    } else if (savedLang && ['en', 'es', 'fr', 'de', 'ja'].includes(savedLang)) {
-      // If no URL parameter but we have a saved preference, update URL
-      const newParams = new URLSearchParams(searchParams.toString());
-      newParams.set('lang', savedLang);
-      router.push(`?${newParams.toString()}`);
-      setLanguageState(savedLang);
+      localStorage.setItem('language', urlLang);
     }
-  }, [searchParams, router]);
+  }, [searchParams, language]);
 
   const setLanguage = (newLang: Language) => {
-    // Update URL
+    if (newLang === language) return; // Don't update if language hasn't changed
+
+    // Update URL while preserving current path and other params
     const newParams = new URLSearchParams(searchParams.toString());
     newParams.set('lang', newLang);
-    router.push(`?${newParams.toString()}`);
+    router.push(`${pathname}?${newParams.toString()}`);
     
     // Update state and localStorage
     setLanguageState(newLang);
     localStorage.setItem('language', newLang);
   };
 
+  // Load translations when language changes
   useEffect(() => {
-    // Load language file dynamically
     async function loadTranslations() {
       if (language === 'en') {
         setTranslations(en);

@@ -12,7 +12,7 @@ export const fr = {
       hero: {
         title: 'Plateforme de service client nouvelle génération',
         subtitle: 'Donnez à votre équipe de support les moyens de réussir grâce à des solutions basées sur l\'IA',
-        getStarted: 'Commencer',
+        getStarted: 'Portail employé',
         learnMore: 'En savoir plus'
       },
       features: {
@@ -48,6 +48,11 @@ export const fr = {
       technical: {
         title: 'FAQ sur le support technique',
         description: 'Obtenez de l\'aide sur les problèmes techniques, le dépannage et la configuration.',
+        needHelp: {
+          title: 'Encore besoin d\'aide ?',
+          description: 'Si vous n\'avez pas trouvé la réponse que vous cherchez, notre équipe de support technique est disponible 24h/24 et 7j/7 pour vous aider. Vous pouvez utiliser notre formulaire de contact ou nous envoyer un e-mail à support@tigerpanda.tv - nous répondrons sous 24 heures.',
+          contactButton: 'Contacter le support'
+        },
         items: [
           {
             question: "Comment puis-je réinitialiser mon mot de passe ?",
@@ -59,7 +64,7 @@ export const fr = {
           },
           {
             question: "Comment puis-je gérer mes paramètres de notification ?",
-            answer: "Connectez-vous à votre compte et accédez à Paramètres> Notifications. Vous pouvez y personnaliser vos préférences pour les notifications par e-mail, les alertes dans l'application et les notifications push mobiles. Vous pouvez définir différents niveaux de notification pour les mises à jour de tickets, les mentions et les annonces système."
+            answer: "Connectez-vous à votre compte et accédez à Paramètres > Notifications. Vous pouvez y personnaliser vos préférences pour les notifications par e-mail, les alertes dans l'application et les notifications push mobiles. Vous pouvez définir différents niveaux de notification pour les mises à jour de tickets, les mentions et les annonces système."
           },
           {
             question: "Que dois-je faire si je rencontre une erreur ?",
@@ -80,6 +85,68 @@ export const fr = {
           {
             question: "Quelle est la configuration système requise ?",
             answer: "Configuration minimale requise : 2 Go de RAM, navigateur Web moderne, connexion Internet stable (1 Mbps +). Pour des performances optimales, nous recommandons : 4 Go + de RAM, Internet haut débit (5 Mbps +) et une résolution d'écran de 1280x720 ou supérieure."
+          }
+        ]
+      },
+      billing: {
+        title: 'FAQ Facturation',
+        description: 'Réponses aux questions fréquentes sur la facturation et les abonnements.',
+        needHelp: {
+          title: 'Besoin d\'aide avec la facturation ?',
+          description: 'Si vous avez des questions sur la facturation ou les paiements, notre équipe de support facturation est là pour vous aider. Vous pouvez utiliser notre formulaire de contact ou nous envoyer un email à billing@tigerpanda.tv - nous répondrons dans les 24 heures.',
+          contactButton: 'Contacter le support facturation'
+        },
+        items: [
+          {
+            question: "Quels modes de paiement acceptez-vous ?",
+            answer: "Nous acceptons toutes les principales cartes de crédit (Visa, MasterCard, American Express), PayPal et les virements bancaires pour les abonnements annuels."
+          },
+          {
+            question: "À quelle fréquence serai-je facturé ?",
+            answer: "Nous proposons des cycles de facturation mensuels et annuels. Les abonnements mensuels sont facturés le même jour chaque mois, tandis que les abonnements annuels sont facturés une fois par an avec une remise de 20%."
+          },
+          {
+            question: "Puis-je changer mon plan d'abonnement ?",
+            answer: "Oui, vous pouvez mettre à niveau ou rétrograder votre abonnement à tout moment. Les changements vers un niveau supérieur prennent effet immédiatement, tandis que les rétrogradations prennent effet au début de votre prochain cycle de facturation."
+          },
+          {
+            question: "Comment fonctionnent les remboursements ?",
+            answer: "Nous offrons des remboursements au prorata pour les abonnements annuels s'ils sont annulés dans les 30 jours. Les abonnements mensuels peuvent être annulés à tout moment mais ne sont pas éligibles aux remboursements pour la période de facturation en cours."
+          },
+          {
+            question: "Proposez-vous des tarifs entreprise ?",
+            answer: "Oui, nous proposons des tarifs entreprise personnalisés avec des fonctionnalités supplémentaires et un support dédié. Veuillez contacter notre équipe commerciale pour plus d'informations."
+          }
+        ]
+      },
+      product: {
+        title: 'FAQ Produit',
+        description: 'En savoir plus sur les fonctionnalités et les capacités de notre produit.',
+        needHelp: {
+          title: 'Besoin d\'aide avec notre produit ?',
+          description: 'Si vous avez des questions sur les fonctionnalités ou les capacités de notre produit, notre équipe commerciale est là pour vous aider. Vous pouvez utiliser notre formulaire de contact ou nous envoyer un email à sales@tigerpanda.tv - nous répondrons dans les 24 heures.',
+          contactButton: 'Contacter l\'équipe commerciale'
+        },
+        items: [
+          {
+            question: "Quelles fonctionnalités sont incluses dans chaque plan ?",
+            answer: "Nos plans incluent différents niveaux de fonctionnalités telles que la gestion des tickets, l'accès à la base de connaissances, les réponses alimentées par l'IA et l'analyse. Visitez notre page de tarification pour une comparaison détaillée des fonctionnalités entre les différents plans."
+          },
+          {
+            question: "Puis-je intégrer d'autres outils ?",
+            answer: "Oui, nous proposons des intégrations avec des outils populaires, notamment Slack, Microsoft Teams, Jira et les principaux fournisseurs de messagerie. Des intégrations personnalisées sont disponibles pour les clients entreprise."
+          },
+          {
+            question: "Y a-t-il une limite sur le nombre de tickets ?",
+            answer: "Chaque plan a différentes limites de volume de tickets. Les plans de base incluent jusqu'à 1 000 tickets par mois, tandis que les niveaux supérieurs offrent des tickets illimités. Les plans entreprise peuvent être personnalisés en fonction de vos besoins."
+          },
+          {
+            question: "Quel type de support fournissez-vous ?",
+            answer: "Nous offrons un support par e-mail pour tous les plans, avec un support téléphonique et prioritaire supplémentaire pour les niveaux supérieurs. Les clients entreprise bénéficient d'une gestion de compte dédiée et d'un support 24/7."
+          },
+          {
+            question: "Proposez-vous une période d'essai ?",
+            answer: "Oui, nous proposons un essai gratuit de 14 jours de notre plan Professionnel avec un accès complet à toutes les fonctionnalités. Aucune carte de crédit n'est requise pour commencer votre essai."
           }
         ]
       }

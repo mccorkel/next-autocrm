@@ -8,9 +8,11 @@ import {
   Heading,
   Text,
   View,
+  Link,
   useTheme,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const technicalFaqs = [
   {
@@ -50,6 +52,7 @@ const technicalFaqs = [
 export default function TechnicalFAQPage() {
   const router = useRouter();
   const { tokens } = useTheme();
+  const { translations } = useLanguage();
 
   return (
     <View 
@@ -59,37 +62,55 @@ export default function TechnicalFAQPage() {
     >
       <Flex direction="column" gap={tokens.space.large}>
         <Flex justifyContent="space-between" alignItems="center">
-          <Heading level={1}>Technical Support FAQ</Heading>
+          <Heading level={1}>{translations.faq.technical.title}</Heading>
           <Button onClick={() => router.push("/")} variation="link">
-            Back to Home
+            {translations.common.back}
           </Button>
         </Flex>
 
         <Card>
           <Flex direction="column" gap={tokens.space.medium}>
-            {technicalFaqs.map((faq, index) => (
-              <Card key={index} variation="outlined">
-                <Flex direction="column" gap={tokens.space.small}>
-                  <Heading level={3}>{faq.question}</Heading>
-                  <Text>{faq.answer}</Text>
-                </Flex>
-              </Card>
-            ))}
+            <Text>{translations.faq.technical.description}</Text>
+            <Accordion.Container>
+              {translations.faq.technical.items.map((faq, index) => (
+                <Accordion.Item key={index} value={`item-${index}`}>
+                  <Accordion.Trigger>
+                    <Text fontWeight={tokens.fontWeights.semibold}>
+                      {faq.question}
+                    </Text>
+                  </Accordion.Trigger>
+                  <Accordion.Content>
+                    <Text padding={tokens.space.small}>
+                      {faq.answer}
+                    </Text>
+                  </Accordion.Content>
+                </Accordion.Item>
+              ))}
+            </Accordion.Container>
           </Flex>
         </Card>
 
         <Card>
           <Flex direction="column" alignItems="center" gap={tokens.space.medium}>
-            <Heading level={3}>Still need help?</Heading>
+            <Heading level={3}>{translations.faq.technical.needHelp.title}</Heading>
             <Text textAlign="center">
-              If you couldn't find the answer you're looking for, our technical support team is available 24/7 to assist you.
+              {translations.faq.technical.needHelp.description}
             </Text>
-            <Button
-              variation="primary"
-              onClick={() => router.push("/contact")}
-            >
-              Contact Support
-            </Button>
+            <Flex direction="row" gap={tokens.space.medium}>
+              <Button
+                variation="primary"
+                onClick={() => router.push("/contact")}
+              >
+                {translations.faq.technical.needHelp.contactButton}
+              </Button>
+              <Link
+                href="mailto:support@tigerpanda.tv"
+                isExternal
+                color={tokens.colors.blue[60]}
+              >
+                support@tigerpanda.tv
+              </Link>
+            </Flex>
           </Flex>
         </Card>
       </Flex>

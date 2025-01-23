@@ -12,7 +12,7 @@ export const es = {
       hero: {
         title: 'Plataforma de servicio al cliente de última generación',
         subtitle: 'Empodere a su equipo de soporte con soluciones impulsadas por IA',
-        getStarted: 'Empezar',
+        getStarted: 'Portal del empleado',
         learnMore: 'Más información'
       },
       features: {
@@ -48,6 +48,11 @@ export const es = {
       technical: {
         title: 'Preguntas frecuentes sobre soporte técnico',
         description: 'Obtenga ayuda con problemas técnicos, solución de problemas y configuración.',
+        needHelp: {
+          title: '¿Aún necesita ayuda?',
+          description: 'Si no encontró la respuesta que busca, nuestro equipo de soporte técnico está disponible las 24 horas para ayudarlo. Puede usar nuestro formulario de contacto o enviarnos un correo electrónico a support@tigerpanda.tv - responderemos dentro de las 24 horas.',
+          contactButton: 'Contactar soporte'
+        },
         items: [
           {
             question: "¿Cómo restablezco mi contraseña?",
@@ -59,7 +64,7 @@ export const es = {
           },
           {
             question: "¿Cómo puedo administrar mi configuración de notificaciones?",
-            answer: "Inicie sesión en su cuenta y vaya a Configuración> Notificaciones. Aquí puede personalizar sus preferencias para notificaciones por correo electrónico, alertas en la aplicación y notificaciones push móviles. Puede establecer diferentes niveles de notificación para actualizaciones de tickets, menciones y anuncios del sistema."
+            answer: "Inicie sesión en su cuenta y vaya a Configuración > Notificaciones. Aquí puede personalizar sus preferencias para notificaciones por correo electrónico, alertas en la aplicación y notificaciones push móviles. Puede establecer diferentes niveles de notificación para actualizaciones de tickets, menciones y anuncios del sistema."
           },
           {
             question: "¿Qué debo hacer si encuentro un error?",
@@ -80,6 +85,68 @@ export const es = {
           {
             question: "¿Cuáles son los requisitos del sistema?",
             answer: "Requisitos mínimos: 2 GB de RAM, navegador web moderno, conexión a Internet estable (1 Mbps +). Para un rendimiento óptimo, recomendamos: 4 GB + RAM, Internet de alta velocidad (5 Mbps +) y una resolución de pantalla de 1280x720 o superior."
+          }
+        ]
+      },
+      billing: {
+        title: 'Preguntas frecuentes sobre facturación',
+        description: 'Encuentre respuestas a preguntas comunes sobre facturación y suscripciones.',
+        needHelp: {
+          title: '¿Necesita ayuda con la facturación?',
+          description: 'Si tiene preguntas sobre facturación o pagos, nuestro equipo de soporte de facturación está aquí para ayudarlo. Puede usar nuestro formulario de contacto o enviarnos un correo electrónico a billing@tigerpanda.tv - responderemos dentro de las 24 horas.',
+          contactButton: 'Contactar soporte de facturación'
+        },
+        items: [
+          {
+            question: "¿Qué métodos de pago aceptan?",
+            answer: "Aceptamos todas las principales tarjetas de crédito (Visa, MasterCard, American Express), PayPal y transferencias bancarias para suscripciones anuales."
+          },
+          {
+            question: "¿Con qué frecuencia se me facturará?",
+            answer: "Ofrecemos ciclos de facturación mensuales y anuales. Las suscripciones mensuales se facturan el mismo día cada mes, mientras que las suscripciones anuales se facturan una vez al año con un 20% de descuento."
+          },
+          {
+            question: "¿Puedo cambiar mi plan de suscripción?",
+            answer: "Sí, puede actualizar o reducir su suscripción en cualquier momento. Los cambios a un nivel superior entran en vigor inmediatamente, mientras que las reducciones entran en vigor al comienzo de su próximo ciclo de facturación."
+          },
+          {
+            question: "¿Cómo funcionan los reembolsos?",
+            answer: "Ofrecemos reembolsos prorrateados para suscripciones anuales si se cancelan dentro de los 30 días. Las suscripciones mensuales se pueden cancelar en cualquier momento pero no son elegibles para reembolsos del período de facturación actual."
+          },
+          {
+            question: "¿Ofrecen precios para empresas?",
+            answer: "Sí, ofrecemos precios personalizados para empresas con características adicionales y soporte dedicado. Por favor, contacte a nuestro equipo de ventas para más información."
+          }
+        ]
+      },
+      product: {
+        title: 'Preguntas frecuentes sobre el producto',
+        description: 'Aprenda más sobre las características y capacidades de nuestro producto.',
+        needHelp: {
+          title: '¿Necesita ayuda con nuestro producto?',
+          description: 'Si tiene preguntas sobre las características o capacidades de nuestro producto, nuestro equipo de ventas está aquí para ayudarlo. Puede usar nuestro formulario de contacto o enviarnos un correo electrónico a sales@tigerpanda.tv - responderemos dentro de las 24 horas.',
+          contactButton: 'Contactar equipo de ventas'
+        },
+        items: [
+          {
+            question: "¿Qué características se incluyen en cada plan?",
+            answer: "Nuestros planes incluyen diferentes niveles de características como gestión de tickets, acceso a base de conocimientos, respuestas impulsadas por IA y análisis. Visite nuestra página de precios para una comparación detallada de características entre diferentes planes."
+          },
+          {
+            question: "¿Puedo integrar con otras herramientas?",
+            answer: "Sí, ofrecemos integraciones con herramientas populares incluyendo Slack, Microsoft Teams, Jira y los principales proveedores de correo electrónico. Las integraciones personalizadas están disponibles para clientes empresariales."
+          },
+          {
+            question: "¿Hay un límite en el número de tickets?",
+            answer: "Cada plan tiene diferentes límites de volumen de tickets. Los planes básicos incluyen hasta 1,000 tickets por mes, mientras que los niveles superiores ofrecen tickets ilimitados. Los planes empresariales se pueden personalizar según sus necesidades."
+          },
+          {
+            question: "¿Qué tipo de soporte proporcionan?",
+            answer: "Ofrecemos soporte por correo electrónico para todos los planes, con soporte telefónico y prioritario adicional para niveles superiores. Los clientes empresariales reciben gestión de cuenta dedicada y soporte 24/7."
+          },
+          {
+            question: "¿Ofrecen un período de prueba?",
+            answer: "Sí, ofrecemos una prueba gratuita de 14 días de nuestro plan Profesional con acceso completo a todas las características. No se requiere tarjeta de crédito para comenzar su prueba."
           }
         ]
       }

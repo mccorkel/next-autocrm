@@ -11,7 +11,7 @@ export const en = {
     hero: {
       title: 'Next-Gen Customer Service Platform',
       subtitle: 'Empower your support team with AI-driven solutions',
-      getStarted: 'Get Started',
+      getStarted: 'Employee Portal',
       learnMore: 'Learn More'
     },
     features: {
@@ -47,6 +47,11 @@ export const en = {
     technical: {
       title: 'Technical Support FAQ',
       description: 'Get help with technical issues, troubleshooting, and setup.',
+      needHelp: {
+        title: 'Still need help?',
+        description: 'If you couldn\'t find the answer you\'re looking for, our technical support team is available 24/7 to assist you. You can use our contact form or email us at support@tigerpanda.tv - we\'ll respond within 24 hours.',
+        contactButton: 'Contact Support'
+      },
       items: [
         {
           question: "How do I reset my password?",
@@ -79,6 +84,68 @@ export const en = {
         {
           question: "What are the system requirements?",
           answer: "Minimum requirements: 2GB RAM, modern web browser, stable internet connection (1Mbps+). For optimal performance, we recommend: 4GB+ RAM, high-speed internet (5Mbps+), and a screen resolution of 1280x720 or higher."
+        }
+      ]
+    },
+    billing: {
+      title: 'Billing FAQ',
+      description: 'Find answers to common questions about billing and subscriptions.',
+      needHelp: {
+        title: 'Need help with billing?',
+        description: 'If you have any questions about billing or payments, our billing support team is here to help. You can use our contact form or email us at billing@tigerpanda.tv - we\'ll respond within 24 hours.',
+        contactButton: 'Contact Billing Support'
+      },
+      items: [
+        {
+          question: "What payment methods do you accept?",
+          answer: "We accept all major credit cards (Visa, MasterCard, American Express), PayPal, and bank transfers for annual subscriptions."
+        },
+        {
+          question: "How often will I be billed?",
+          answer: "We offer both monthly and annual billing cycles. Monthly subscriptions are billed on the same day each month, while annual subscriptions are billed once per year with a 20% discount."
+        },
+        {
+          question: "Can I change my subscription plan?",
+          answer: "Yes, you can upgrade or downgrade your subscription at any time. Changes to a higher tier take effect immediately, while downgrades take effect at the start of your next billing cycle."
+        },
+        {
+          question: "How do refunds work?",
+          answer: "We offer prorated refunds for annual subscriptions if cancelled within 30 days. Monthly subscriptions can be cancelled anytime but are not eligible for refunds for the current billing period."
+        },
+        {
+          question: "Do you offer enterprise pricing?",
+          answer: "Yes, we offer custom enterprise pricing with additional features and dedicated support. Please contact our sales team for more information."
+        }
+      ]
+    },
+    product: {
+      title: 'Product FAQ',
+      description: 'Learn more about our product features and capabilities.',
+      needHelp: {
+        title: 'Need help with our product?',
+        description: 'If you have any questions about our product features or capabilities, our sales team is here to help. You can use our contact form or email us at sales@tigerpanda.tv - we\'ll respond within 24 hours.',
+        contactButton: 'Contact Sales Team'
+      },
+      items: [
+        {
+          question: "What features are included in each plan?",
+          answer: "Our plans include varying levels of features such as ticket management, knowledge base access, AI-powered responses, and analytics. Visit our pricing page for a detailed comparison of features across different plans."
+        },
+        {
+          question: "Can I integrate with other tools?",
+          answer: "Yes, we offer integrations with popular tools including Slack, Microsoft Teams, Jira, and major email providers. Custom integrations are available for enterprise customers."
+        },
+        {
+          question: "Is there a limit on the number of tickets?",
+          answer: "Each plan has different ticket volume limits. Basic plans include up to 1,000 tickets per month, while higher tiers offer unlimited tickets. Enterprise plans can be customized based on your needs."
+        },
+        {
+          question: "What kind of support do you provide?",
+          answer: "We offer email support for all plans, with additional phone and priority support for higher tiers. Enterprise customers receive dedicated account management and 24/7 support."
+        },
+        {
+          question: "Do you offer a trial period?",
+          answer: "Yes, we offer a 14-day free trial of our Professional plan with full access to all features. No credit card is required to start your trial."
         }
       ]
     }
