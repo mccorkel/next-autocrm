@@ -12,16 +12,23 @@ import {
   Divider,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "./contexts/LanguageContext";
+import { LanguagePicker } from "./components/LanguagePicker";
 
 export default function LandingPage() {
   const router = useRouter();
   const { tokens } = useTheme();
+  const { translations } = useLanguage();
 
   return (
     <View 
       padding={tokens.space.large}
       backgroundColor={tokens.colors.background.primary}
     >
+      <Flex direction="row" justifyContent="flex-end" padding={tokens.space.small}>
+        <LanguagePicker />
+      </Flex>
+
       <Flex direction="column" alignItems="center" gap={tokens.space.large}>
         <Flex direction="column" alignItems="center" gap={tokens.space.small}>
           <Heading 
@@ -29,13 +36,13 @@ export default function LandingPage() {
             textAlign="center"
             color={tokens.colors.font.primary}
           >
-            How can we help you today?
+            {translations.landing.hero.title}
           </Heading>
           <Text 
             textAlign="center" 
             color={tokens.colors.font.secondary}
           >
-            Choose a category below to find answers to your questions
+            {translations.landing.hero.subtitle}
           </Text>
         </Flex>
 
@@ -53,16 +60,18 @@ export default function LandingPage() {
             padding={tokens.space.large}
           >
             <Flex direction="column" gap={tokens.space.medium} height="100%">
-              <Heading level={2} color={tokens.colors.font.primary}>Technical Support</Heading>
+              <Heading level={2} color={tokens.colors.font.primary}>
+                {translations.faq.technical.title}
+              </Heading>
               <Text color={tokens.colors.font.secondary}>
-                Get help with technical issues, troubleshooting, and setup guides.
+                {translations.faq.technical.description}
               </Text>
               <Flex justifyContent="flex-end" marginTop="auto">
                 <Button
                   variation="primary"
                   onClick={() => router.push("/faq/technical")}
                 >
-                  View Technical FAQs
+                  {translations.landing.hero.learnMore}
                 </Button>
               </Flex>
             </Flex>
@@ -76,16 +85,18 @@ export default function LandingPage() {
             padding={tokens.space.large}
           >
             <Flex direction="column" gap={tokens.space.medium} height="100%">
-              <Heading level={2} color={tokens.colors.font.primary}>Billing</Heading>
+              <Heading level={2} color={tokens.colors.font.primary}>
+                {translations.contact.form.categories.billing}
+              </Heading>
               <Text color={tokens.colors.font.secondary}>
-                Find answers about billing, subscriptions, and payment methods.
+                {translations.landing.features.ticketing.description}
               </Text>
               <Flex justifyContent="flex-end" marginTop="auto">
                 <Button
                   variation="primary"
                   onClick={() => router.push("/faq/billing")}
                 >
-                  View Billing FAQs
+                  {translations.landing.hero.learnMore}
                 </Button>
               </Flex>
             </Flex>
@@ -99,16 +110,18 @@ export default function LandingPage() {
             padding={tokens.space.large}
           >
             <Flex direction="column" gap={tokens.space.medium} height="100%">
-              <Heading level={2} color={tokens.colors.font.primary}>Product Questions</Heading>
+              <Heading level={2} color={tokens.colors.font.primary}>
+                {translations.contact.form.categories.sales}
+              </Heading>
               <Text color={tokens.colors.font.secondary}>
-                Learn more about our products, features, and sales inquiries.
+                {translations.landing.features.analytics.description}
               </Text>
               <Flex justifyContent="flex-end" marginTop="auto">
                 <Button
                   variation="primary"
                   onClick={() => router.push("/faq/product")}
                 >
-                  View Product FAQs
+                  {translations.landing.hero.learnMore}
                 </Button>
               </Flex>
             </Flex>
@@ -125,16 +138,18 @@ export default function LandingPage() {
           padding={tokens.space.large}
         >
           <Flex direction="column" alignItems="center" gap={tokens.space.medium}>
-            <Heading level={2} color={tokens.colors.font.primary}>Still need help?</Heading>
+            <Heading level={2} color={tokens.colors.font.primary}>
+              {translations.landing.cta.title}
+            </Heading>
             <Text textAlign="center" color={tokens.colors.font.secondary}>
-              Our support team is here to assist you if you couldn't find what you're looking for.
+              {translations.landing.cta.subtitle}
             </Text>
             <Button
               variation="primary"
               size="large"
               onClick={() => router.push("/contact")}
             >
-              Contact Support
+              {translations.contact.form.submit}
             </Button>
           </Flex>
         </Card>
@@ -154,7 +169,7 @@ export default function LandingPage() {
               size="large"
               onClick={() => router.push('/protected/employee')}
             >
-              Employee Access
+              {translations.landing.hero.getStarted}
             </Button>
           </Flex>
         </Card>

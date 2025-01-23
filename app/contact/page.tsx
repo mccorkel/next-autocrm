@@ -16,6 +16,7 @@ import {
   useTheme,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const client = generateClient<Schema>();
 
@@ -24,6 +25,7 @@ type TicketCategory = "ACCOUNT" | "BILLING" | "SUPPORT" | "SALES" | "OTHER";
 export default function ContactPage() {
   const router = useRouter();
   const { tokens } = useTheme();
+  const { translations } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Customer fields
@@ -83,61 +85,61 @@ export default function ContactPage() {
       <Flex direction="column" alignItems="center" gap={tokens.space.large}>
         <Card width="100%" maxWidth="800px">
           <Flex direction="column" gap={tokens.space.medium}>
-            <Heading level={1}>Contact Support</Heading>
+            <Heading level={1}>{translations.contact.title}</Heading>
             <Text>
-              Please fill out the form below and we'll get back to you as soon as possible.
+              {translations.contact.form.description}
             </Text>
 
             <form onSubmit={handleSubmit}>
               <Flex direction="column" gap={tokens.space.medium}>
                 {/* Customer Information Section */}
-                <Heading level={2}>Your Information</Heading>
+                <Heading level={2}>{translations.contact.form.customerInfo}</Heading>
                 <TextField
-                  label="Name"
+                  label={translations.contact.form.name}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                 />
                 <TextField
-                  label="Email"
+                  label={translations.contact.form.email}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
                 <TextField
-                  label="Company"
+                  label={translations.contact.form.company}
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                 />
                 <TextField
-                  label="Phone"
+                  label={translations.contact.form.phone}
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
 
                 {/* Ticket Information Section */}
-                <Heading level={2}>Issue Details</Heading>
+                <Heading level={2}>{translations.contact.form.issueDetails}</Heading>
                 <SelectField
-                  label="Category"
+                  label={translations.contact.form.category}
                   value={category}
                   onChange={(e) => setCategory(e.target.value as TicketCategory)}
                 >
-                  <option value="SUPPORT">Technical Support</option>
-                  <option value="BILLING">Billing</option>
-                  <option value="SALES">Product Questions</option>
-                  <option value="ACCOUNT">Account Management</option>
-                  <option value="OTHER">Other</option>
+                  <option value="SUPPORT">{translations.contact.form.categories.support}</option>
+                  <option value="BILLING">{translations.contact.form.categories.billing}</option>
+                  <option value="SALES">{translations.contact.form.categories.sales}</option>
+                  <option value="ACCOUNT">{translations.contact.form.categories.account}</option>
+                  <option value="OTHER">{translations.contact.form.categories.other}</option>
                 </SelectField>
                 <TextField
-                  label="Subject"
+                  label={translations.contact.form.subject}
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   required
                 />
                 <TextAreaField
-                  label="Description"
+                  label={translations.contact.form.message}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required
@@ -149,15 +151,15 @@ export default function ContactPage() {
                     variation="link"
                     isDisabled={isSubmitting}
                   >
-                    Back
+                    {translations.common.back}
                   </Button>
                   <Button
                     type="submit"
                     variation="primary"
                     isLoading={isSubmitting}
-                    loadingText="Submitting..."
+                    loadingText={translations.contact.form.submitting}
                   >
-                    Submit
+                    {translations.contact.form.submit}
                   </Button>
                 </Flex>
               </Flex>
