@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {
@@ -32,18 +32,18 @@ type BadgeVariation = "info" | "warning" | "error" | "success";
 function AgentDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentView = searchParams.get('view') || 'all';
   const { tokens } = useTheme();
   const { currentAgentId, isInitialized } = useAgent();
   const { translations } = useLanguage();
-  const [tickets, setTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
+  const [tickets, setTickets] = useState<Schema["Ticket"]["type"][]>([]);
   const [allOpenTickets, setAllOpenTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
   const [assignedOpenTickets, setAssignedOpenTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
   const [assignedBlockedTickets, setAssignedBlockedTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
   const [assignedClosedTickets, setAssignedClosedTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
-  const [agents, setAgents] = useState<Array<Schema["Agent"]["type"]>>([]);
+  const [agents, setAgents] = useState<Schema["Agent"]["type"][]>([]);
   const [userGroups, setUserGroups] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState(searchParams.get('view') || 'all');
 
   // Log view changes
   useEffect(() => {
@@ -182,9 +182,31 @@ function AgentDashboardContent() {
     }
   };
 
+  // Fetch tickets only when necessary
   useEffect(() => {
-    fetchTickets();
-  }, [currentAgentId, isInitialized, currentView]);
+    if (isInitialized && currentAgentId) {
+      fetchTickets();
+    }
+  }, [isInitialized, currentAgentId]);
+
+  // Filter tickets based on current view
+  const filteredTickets = useMemo(() => {
+    switch (currentView) {
+      case 'assigned':
+        return assignedOpenTickets;
+      case 'blocked':
+        return assignedBlockedTickets;
+      case 'closed':
+        return assignedClosedTickets;
+      default:
+        return allOpenTickets;
+    }
+  }, [currentView, assignedOpenTickets, assignedBlockedTickets, assignedClosedTickets, allOpenTickets]);
+
+  // Handle view changes
+  const handleViewChange = (view: string) => {
+    setCurrentView(view);
+  };
 
   // Helper functions for badge colors
   function getPriorityColor(priority: string | null | undefined): BadgeVariation {
@@ -226,11 +248,12 @@ function AgentDashboardContent() {
 
   // Render main content
   return (
-    <Flex direction="column" gap={tokens.space.large}>
-      <Card>
-        <Flex direction="column" gap={tokens.space.medium}>
+    <View padding={tokens.space.medium} height="calc(100vh - 120px)">
+      <Card height="100%" padding={tokens.space.xs}>
+        <Flex direction="column" height="100%" gap={tokens.space.xxs}>
+          {/* Fixed header */}
           <Flex justifyContent="space-between" alignItems="center">
-            <Heading level={2}>Tickets</Heading>
+            <Heading level={3}>Tickets</Heading>
             <Button
               variation="primary"
               onClick={() => router.push('/protected/tickets/new')}
@@ -239,164 +262,179 @@ function AgentDashboardContent() {
             </Button>
           </Flex>
           
+          {/* Tabs and table container */}
           <DashboardTabs 
             totalOpenTickets={allOpenTickets.length} 
             assignedOpenTickets={assignedOpenTickets.length}
             assignedBlockedTickets={assignedBlockedTickets.length}
             assignedClosedTickets={assignedClosedTickets.length}
-          />
-
-          <Table
-            highlightOnHover={true}
-            variation="striped"
-            size="small"
+            onViewChange={handleViewChange}
           >
-            <TableHead>
-              <TableRow>
-                <TableCell as="th">ID</TableCell>
-                <TableCell as="th">Title</TableCell>
-                <TableCell as="th">Status</TableCell>
-                <TableCell as="th">Priority</TableCell>
-                <TableCell as="th">Category</TableCell>
-                <TableCell as="th">Customer ID</TableCell>
-                <TableCell as="th">Assigned To</TableCell>
-                <TableCell as="th">Created</TableCell>
-                <TableCell as="th">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {tickets.map((ticket) => {
-                const assignedAgent = agents.find(agent => agent.id === ticket.assignedAgentId);
-                const ticketUrl = `/protected/tickets/${ticket.id}`;
-                return (
-                  <TableRow key={ticket.id}>
-                    <TableCell>
-                      <a 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          router.push(ticketUrl);
-                        }}
-                        href="#"
-                        style={{
-                          color: '#007EB9',
-                          textDecoration: 'none',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {ticket.id?.slice(0, 8)}
-                      </a>
-                    </TableCell>
-                    <TableCell>{ticket.title}</TableCell>
-                    <TableCell>
-                      <Badge variation={getStatusColor(ticket.status)}>
-                        {ticket.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variation={getPriorityColor(ticket.priority)}>
-                        {ticket.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{ticket.category}</TableCell>
-                    <TableCell>
-                      {ticket.customerId ? (
-                        <a 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            router.push(`/protected/customers/${ticket.customerId}`);
-                          }}
-                          href="#"
-                          style={{
-                            color: '#007EB9',
-                            textDecoration: 'none',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {ticket.customerId.slice(0, 8)}
-                        </a>
-                      ) : (
-                        'N/A'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {assignedAgent ? (
-                        <a 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            router.push(`/protected/agents/${assignedAgent.id}`);
-                          }}
-                          href="#"
-                          style={{
-                            color: '#007EB9',
-                            textDecoration: 'none',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {assignedAgent.email}
-                        </a>
-                      ) : (
-                        <Badge variation="warning">
-                          Unassigned
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(ticket.createdAt || "").toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      {ticket.assignedAgentId && ticket.assignedAgentId === currentAgentId ? (
-                        <Button
-                          size="small"
-                          onClick={async () => {
-                            if (!isInitialized) return;
-                            try {
-                              await client.models.Ticket.update({
-                                id: ticket.id,
-                                assignedAgentId: null
-                              });
-                              // Refresh all ticket data
-                              await fetchTickets();
-                            } catch (error) {
-                              console.error('Error unassigning ticket:', error);
-                            }
-                          }}
-                        >
-                          Unassign
-                        </Button>
-                      ) : (
-                        <Button
-                          size="small"
-                          onClick={async () => {
-                            if (!isInitialized || !currentAgentId) return;
-                            try {
-                              await client.models.Ticket.update({
-                                id: ticket.id,
-                                assignedAgentId: currentAgentId
-                              });
-                              // Refresh all ticket data
-                              await fetchTickets();
-                            } catch (error) {
-                              console.error('Error assigning ticket:', error);
-                            }
-                          }}
-                          isDisabled={Boolean(
-                            !isInitialized ||
-                            (ticket.assignedAgentId && 
-                            !userGroups.some(group => ['ADMIN', 'SUPER'].includes(group)))
-                          )}
-                        >
-                          {!ticket.assignedAgentId ? 'Assign To Me' : 'Take Over'}
-                        </Button>
-                      )}
-                    </TableCell>
+            <View style={{ 
+              overflowY: 'auto', 
+              height: 'calc(100vh - 190px)',
+              position: 'relative',
+              paddingBottom: '8px'
+            }}>
+              <Table
+                highlightOnHover={true}
+                variation="striped"
+                size="small"
+              >
+                <TableHead style={{ 
+                  position: 'sticky', 
+                  top: 0, 
+                  backgroundColor: 'white', 
+                  zIndex: 1,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                }}>
+                  <TableRow>
+                    <TableCell as="th">ID</TableCell>
+                    <TableCell as="th">Title</TableCell>
+                    <TableCell as="th">Status</TableCell>
+                    <TableCell as="th">Priority</TableCell>
+                    <TableCell as="th">Category</TableCell>
+                    <TableCell as="th">Customer ID</TableCell>
+                    <TableCell as="th">Assigned To</TableCell>
+                    <TableCell as="th">Created</TableCell>
+                    <TableCell as="th">Actions</TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                </TableHead>
+                <TableBody>
+                  {filteredTickets.map((ticket) => {
+                    const assignedAgent = agents.find(agent => agent.id === ticket.assignedAgentId);
+                    const ticketUrl = `/protected/tickets/${ticket.id}`;
+                    return (
+                      <TableRow key={ticket.id}>
+                        <TableCell>
+                          <a 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              router.push(ticketUrl);
+                            }}
+                            href="#"
+                            style={{
+                              color: '#007EB9',
+                              textDecoration: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {ticket.id?.slice(0, 8)}
+                          </a>
+                        </TableCell>
+                        <TableCell>{ticket.title}</TableCell>
+                        <TableCell>
+                          <Badge variation={getStatusColor(ticket.status)}>
+                            {ticket.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variation={getPriorityColor(ticket.priority)}>
+                            {ticket.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{ticket.category}</TableCell>
+                        <TableCell>
+                          {ticket.customerId ? (
+                            <a 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                router.push(`/protected/customers/${ticket.customerId}`);
+                              }}
+                              href="#"
+                              style={{
+                                color: '#007EB9',
+                                textDecoration: 'none',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {ticket.customerId.slice(0, 8)}
+                            </a>
+                          ) : (
+                            'N/A'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {assignedAgent ? (
+                            <a 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                router.push(`/protected/agents/${assignedAgent.id}`);
+                              }}
+                              href="#"
+                              style={{
+                                color: '#007EB9',
+                                textDecoration: 'none',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {assignedAgent.email}
+                            </a>
+                          ) : (
+                            <Badge variation="warning">
+                              Unassigned
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(ticket.createdAt || "").toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {ticket.assignedAgentId && ticket.assignedAgentId === currentAgentId ? (
+                            <Button
+                              size="small"
+                              onClick={async () => {
+                                if (!isInitialized) return;
+                                try {
+                                  await client.models.Ticket.update({
+                                    id: ticket.id,
+                                    assignedAgentId: null
+                                  });
+                                  // Refresh all ticket data
+                                  await fetchTickets();
+                                } catch (error) {
+                                  console.error('Error unassigning ticket:', error);
+                                }
+                              }}
+                            >
+                              Unassign
+                            </Button>
+                          ) : (
+                            <Button
+                              size="small"
+                              onClick={async () => {
+                                if (!isInitialized || !currentAgentId) return;
+                                try {
+                                  await client.models.Ticket.update({
+                                    id: ticket.id,
+                                    assignedAgentId: currentAgentId
+                                  });
+                                  // Refresh all ticket data
+                                  await fetchTickets();
+                                } catch (error) {
+                                  console.error('Error assigning ticket:', error);
+                                }
+                              }}
+                              isDisabled={Boolean(
+                                !isInitialized ||
+                                (ticket.assignedAgentId && 
+                                !userGroups.some(group => ['ADMIN', 'SUPER'].includes(group)))
+                              )}
+                            >
+                              {!ticket.assignedAgentId ? 'Assign To Me' : 'Take Over'}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </View>
+          </DashboardTabs>
         </Flex>
       </Card>
-    </Flex>
+    </View>
   );
 }
 

@@ -41,6 +41,7 @@ const schema = a.schema({
     id: a.id(),
     ticketId: a.string(),
     agentId: a.string(),
+    agentEmail: a.string(),
     type: a.enum(['NOTE', 'STATUS_CHANGE', 'PRIORITY_CHANGE', 'ASSIGNMENT_CHANGE', 'EMAIL_RECEIVED', 'EMAIL_SENT']),
     content: a.string(),
     oldValue: a.string(),

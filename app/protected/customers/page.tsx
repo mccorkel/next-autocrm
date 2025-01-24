@@ -45,7 +45,6 @@ function CustomerManagementContent() {
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
-  const [showAddForm, setShowAddForm] = useState(false);
   const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const router = useRouter();
 
@@ -131,7 +130,6 @@ function CustomerManagementContent() {
       setEmail("");
       setCompany("");
       setPhone("");
-      setShowAddForm(false);
     } catch (error) {
       console.error("Error creating customer:", error);
     }
@@ -158,6 +156,12 @@ function CustomerManagementContent() {
       <Flex direction="column" gap={tokens.space.medium}>
         <Flex justifyContent="space-between" alignItems="center">
           <Heading level={2} color={tokens.colors.font.primary}>Customer Management</Heading>
+          <Button
+            variation="primary"
+            onClick={() => router.push('/protected/customers/new')}
+          >
+            Add New Customer
+          </Button>
         </Flex>
 
         {error && (
@@ -176,8 +180,8 @@ function CustomerManagementContent() {
           <Table highlightOnHover={true}>
             <TableHead>
               <TableRow>
-                <TableCell as="th">Name</TableCell>
                 <TableCell as="th">Email</TableCell>
+                <TableCell as="th">Name</TableCell>
                 <TableCell as="th">Company</TableCell>
                 <TableCell as="th">Phone</TableCell>
                 <TableCell as="th">Actions</TableCell>
@@ -186,70 +190,47 @@ function CustomerManagementContent() {
             <TableBody>
               {customers.map((customer) => (
                 <TableRow key={customer.id}>
+                  <TableCell>
+                    <a 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push(`/protected/customers/${customer.id}`);
+                      }}
+                      href="#"
+                      style={{
+                        color: '#007EB9',
+                        textDecoration: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {customer.email}
+                    </a>
+                  </TableCell>
                   <TableCell>{customer.name}</TableCell>
-                  <TableCell>{customer.email}</TableCell>
                   <TableCell>{customer.company}</TableCell>
                   <TableCell>{customer.phone}</TableCell>
                   <TableCell>
                     <Button
                       size="small"
-                      onClick={() => {/* TODO: Add edit functionality */}}
+                      onClick={() => {
+                        router.push(`/protected/tickets/new?customerId=${customer.id}`);
+                      }}
                     >
-                      Edit
+                      Create New Customer Ticket
                     </Button>
                   </TableCell>
                 </TableRow>
               ))}
+              {customers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5}>
+                    <Text textAlign="center">No customers found</Text>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </Card>
-
-        <Flex justifyContent="center">
-          <Button
-            variation="primary"
-            size="large"
-            onClick={() => setShowAddForm(!showAddForm)}
-          >
-            {showAddForm ? "Cancel" : "Add New Customer"}
-          </Button>
-        </Flex>
-
-        {showAddForm && (
-          <Card>
-            <Heading level={2} paddingBottom={tokens.space.medium}>Add New Customer</Heading>
-            <form onSubmit={createCustomer}>
-              <Flex direction="column" gap={tokens.space.medium}>
-                <TextField
-                  label="Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-                <TextField
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <TextField
-                  label="Company"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                />
-                <TextField
-                  label="Phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-                <Button type="submit" variation="primary">
-                  Add Customer
-                </Button>
-              </Flex>
-            </form>
-          </Card>
-        )}
       </Flex>
     </View>
   );

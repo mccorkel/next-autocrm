@@ -19,22 +19,32 @@ interface Props {
 }
 
 const StyledTabs = styled(Tabs)(({ theme }) => ({
+  borderBottom: 1,
+  borderColor: 'divider',
+  position: 'sticky',
+  top: 0,
+  backgroundColor: 'white',
+  zIndex: 2,
+  minHeight: '32px',
   '& .MuiTabs-indicator': {
     backgroundColor: '#E91E63',
-    height: 3,
+    height: 2,
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
-  '& .MuiTabs-scrollButtons': {
-    '&.Mui-disabled': {
-      opacity: 0.3,
-    },
+  '& .MuiTabs-flexContainer': {
+    position: 'relative',
+    minHeight: '32px',
   },
 }));
 
 const StyledTab = styled(Tab)(({ theme }) => ({
   textTransform: 'none',
   minWidth: 0,
-  padding: '12px 16px',
+  minHeight: '32px',
+  padding: '4px 12px',
+  fontSize: '0.875rem',
   color: 'rgba(0, 0, 0, 0.7)',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   '&.Mui-selected': {
     color: '#E91E63',
     fontWeight: 'bold',

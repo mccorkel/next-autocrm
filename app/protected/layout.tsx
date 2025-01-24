@@ -170,7 +170,7 @@ function ProtectedContent({
           {/* Top Row - Navigation Buttons */}
           <Flex 
             width="100%" 
-            padding={`${tokens.space.small} ${tokens.space.medium}`}
+            padding={`${tokens.space.xs} ${tokens.space.medium}`}
             justifyContent="space-between"
             alignItems="center"
             maxWidth="1400px"
@@ -184,7 +184,7 @@ function ProtectedContent({
               onClick={() => router.push("/")}
               style={{
                 cursor: 'pointer',
-                height: '48px',
+                height: '24px',
                 display: 'flex',
                 alignItems: 'center'
               }}
@@ -198,16 +198,28 @@ function ProtectedContent({
                 }}
               />
             </View>
-            <Flex gap={tokens.space.medium} alignItems="center">
+            <Flex gap={tokens.space.xs} alignItems="center">
               <Button
                 onClick={handleEmailClick}
                 variation="link"
                 size="small"
                 isDisabled={!agentId}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.875rem'
+                }}
               >
                 {user?.signInDetails?.loginId}
               </Button>
-              <Button onClick={handleSignOut} variation="primary">
+              <Button 
+                onClick={handleSignOut} 
+                variation="primary"
+                size="small"
+                style={{
+                  padding: '4px 12px',
+                  fontSize: '0.875rem'
+                }}
+              >
                 Sign Out
               </Button>
             </Flex>

@@ -32,6 +32,34 @@ type TicketCategory = "ACCOUNT" | "BILLING" | "SUPPORT" | "SALES" | "OTHER";
 type ActivityType = "NOTE" | "STATUS_CHANGE" | "PRIORITY_CHANGE" | "ASSIGNMENT_CHANGE";
 type TicketActivity = NonNullable<Schema["TicketActivity"]["type"]>;
 
+function getPriorityColor(priority: string | null | undefined): BadgeVariation {
+  switch (priority) {
+    case "URGENT":
+      return "error";
+    case "HIGH":
+      return "warning";
+    case "MEDIUM":
+      return "info";
+    default:
+      return "info";
+  }
+}
+
+function getStatusColor(status: string | null | undefined): BadgeVariation {
+  switch (status) {
+    case "OPEN":
+      return "warning";
+    case "IN_PROGRESS":
+      return "info";
+    case "BLOCKED":
+      return "error";
+    case "CLOSED":
+      return "success";
+    default:
+      return "info";
+  }
+}
+
 function TicketDetailsContent() {
   const router = useRouter();
   const params = useParams();
@@ -42,6 +70,7 @@ function TicketDetailsContent() {
   const [customer, setCustomer] = useState<Schema["Customer"]["type"] | null>(null);
   const [assignedAgent, setAssignedAgent] = useState<Schema["Agent"]["type"] | null>(null);
   const [activities, setActivities] = useState<TicketActivity[]>([]);
+  const [activityAgents, setActivityAgents] = useState<Record<string, Schema["Agent"]["type"]>>({});
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
   const [notificationPrefs, setNotificationPrefs] = useState<Schema["NotificationPreference"]["type"] | null>(null);
@@ -94,6 +123,20 @@ function TicketDetailsContent() {
               new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()
             );
             setActivities(sortedActivities as TicketActivity[]);
+
+            // Fetch agent details for each activity
+            const agentIds = Array.from(new Set(sortedActivities
+              .map(activity => activity.agentId)
+              .filter(id => id && id !== "SYSTEM") as string[]));
+            
+            const agentDetails: Record<string, Schema["Agent"]["type"]> = {};
+            for (const agentId of agentIds) {
+              const agentResponse = await client.models.Agent.get({ id: agentId });
+              if (agentResponse.data) {
+                agentDetails[agentId] = agentResponse.data;
+              }
+            }
+            setActivityAgents(agentDetails);
           }
 
           // Fetch notification preferences
@@ -127,11 +170,35 @@ function TicketDetailsContent() {
   }, [params.id]);
 
   async function createActivity(type: ActivityType, content: string, oldValue?: string, newValue?: string) {
-    if (!ticket || !currentAgentId || !isInitialized || !ticket.id) return;
+    if (!ticket || !currentAgentId || !isInitialized || !ticket.id) {
+      console.log('createActivity - Early return due to missing data:', {
+        hasTicket: !!ticket,
+        currentAgentId,
+        isInitialized,
+        ticketId: ticket?.id
+      });
+      return;
+    }
 
     try {
+      console.log('createActivity - Starting activity creation:', {
+        type,
+        content,
+        oldValue,
+        newValue,
+        ticketId: ticket.id,
+        currentAgentId
+      });
+
+      // Get current agent's email
+      const agentResponse = await client.models.Agent.get({ id: currentAgentId });
+      console.log('createActivity - Got agent data:', {
+        agentId: currentAgentId,
+        agentEmail: agentResponse.data?.email
+      });
+
       const activity = await client.models.TicketActivity.create({
-        id: ticket.id,
+        ticketId: ticket.id,
         agentId: currentAgentId,
         type,
         content,
@@ -140,7 +207,13 @@ function TicketDetailsContent() {
         createdAt: new Date().toISOString(),
       });
 
+      console.log('createActivity - Activity created:', {
+        activityId: activity.data?.id,
+        success: !!activity.data
+      });
+
       if (activity.data) {
+        console.log('createActivity - Updating activities state');
         setActivities(currentActivities => [activity.data as TicketActivity, ...currentActivities]);
       }
     } catch (error) {
@@ -149,13 +222,30 @@ function TicketDetailsContent() {
   }
 
   const handleStatusChange = async (newStatus: TicketStatus) => {
-    if (!ticket || !isInitialized || !ticket.id) return;
+    if (!ticket || !isInitialized || !ticket.id) {
+      console.log('handleStatusChange - Early return due to missing data:', {
+        hasTicket: !!ticket,
+        isInitialized,
+        ticketId: ticket?.id
+      });
+      return;
+    }
+
     try {
+      console.log('handleStatusChange - Starting status update:', {
+        ticketId: ticket.id,
+        oldStatus: ticket.status,
+        newStatus
+      });
+
       const oldStatus = ticket.status || 'OPEN';
       await client.models.Ticket.update({
         id: ticket.id,
         status: newStatus
       });
+
+      console.log('handleStatusChange - Ticket status updated, creating activity');
+      
       // Create activity
       await createActivity(
         'STATUS_CHANGE',
@@ -163,22 +253,44 @@ function TicketDetailsContent() {
         oldStatus,
         newStatus
       );
+
       // Refresh ticket data
+      console.log('handleStatusChange - Refreshing ticket data');
       const response = await client.models.Ticket.get({ id: ticket.id });
-      if (response.data) setTicket(response.data);
+      if (response.data) {
+        console.log('handleStatusChange - Ticket data refreshed');
+        setTicket(response.data);
+      }
     } catch (error) {
       console.error('Error updating ticket status:', error);
     }
   };
 
   const handlePriorityChange = async (newPriority: TicketPriority) => {
-    if (!ticket || !isInitialized || !ticket.id) return;
+    if (!ticket || !isInitialized || !ticket.id) {
+      console.log('handlePriorityChange - Early return due to missing data:', {
+        hasTicket: !!ticket,
+        isInitialized,
+        ticketId: ticket?.id
+      });
+      return;
+    }
+
     try {
+      console.log('handlePriorityChange - Starting priority update:', {
+        ticketId: ticket.id,
+        oldPriority: ticket.priority,
+        newPriority
+      });
+
       const oldPriority = ticket.priority || 'MEDIUM';
       await client.models.Ticket.update({
         id: ticket.id,
         priority: newPriority
       });
+
+      console.log('handlePriorityChange - Ticket priority updated, creating activity');
+      
       // Create activity
       await createActivity(
         'PRIORITY_CHANGE',
@@ -186,9 +298,14 @@ function TicketDetailsContent() {
         oldPriority,
         newPriority
       );
+
       // Refresh ticket data
+      console.log('handlePriorityChange - Refreshing ticket data');
       const response = await client.models.Ticket.get({ id: ticket.id });
-      if (response.data) setTicket(response.data);
+      if (response.data) {
+        console.log('handlePriorityChange - Ticket data refreshed');
+        setTicket(response.data);
+      }
     } catch (error) {
       console.error('Error updating ticket priority:', error);
     }
@@ -197,7 +314,7 @@ function TicketDetailsContent() {
   const handleAddNote = async () => {
     if (!ticket || !isInitialized || !newNote.trim()) return;
     try {
-      await createActivity('NOTE', newNote);
+      await createActivity('NOTE', newNote.trim());
       setNewNote("");
     } catch (error) {
       console.error('Error adding note:', error);
@@ -322,14 +439,48 @@ function TicketDetailsContent() {
                         <Text fontSize={tokens.fontSizes.large}>
                           {getActivityIcon(activity.type as ActivityType)}
                         </Text>
-                        <Text fontWeight={tokens.fontWeights.bold}>
-                          {activity.agent?.name || activity.agentId}
-                        </Text>
+                        {activity.agentId === "SYSTEM" ? (
+                          <Text fontWeight={tokens.fontWeights.bold}>
+                            System
+                          </Text>
+                        ) : (
+                          <a
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (activity.agentId) {
+                                router.push(`/protected/agents/${activity.agentId}`);
+                              }
+                            }}
+                            href="#"
+                            style={{
+                              color: '#007EB9',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {activityAgents[activity.agentId || ""]?.name || 
+                             activityAgents[activity.agentId || ""]?.email || 
+                             activity.agentId?.slice(0, 8)}
+                          </a>
+                        )}
                         <Text color={tokens.colors.font.tertiary}>
                           {new Date(activity.createdAt || "").toLocaleString()}
                         </Text>
                       </Flex>
                       <Text>{activity.content}</Text>
+                      {(activity.type === 'PRIORITY_CHANGE' || activity.type === 'STATUS_CHANGE') && (
+                        <Flex gap={tokens.space.xs} alignItems="center" marginTop={tokens.space.xxs}>
+                          <Badge variation="info">{activity.oldValue}</Badge>
+                          <Text>→</Text>
+                          <Badge variation={activity.type === 'PRIORITY_CHANGE' ? 
+                            getPriorityColor(activity.newValue) : 
+                            getStatusColor(activity.newValue)
+                          }>
+                            {activity.newValue}
+                          </Badge>
+                        </Flex>
+                      )}
                     </Flex>
                   </Card>
                 ))}

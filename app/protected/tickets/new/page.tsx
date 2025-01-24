@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {
@@ -14,7 +14,7 @@ import {
   View,
   useTheme,
 } from "@aws-amplify/ui-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAgent } from "@/app/contexts/AgentContext";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { Suspense } from "react";
@@ -28,11 +28,13 @@ type TicketStatus = "OPEN" | "IN_PROGRESS" | "BLOCKED" | "CLOSED";
 
 function CreateTicketContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { tokens } = useTheme();
   const { currentAgentId, isInitialized } = useAgent();
   const { translations } = useLanguage();
   const { removeTab } = useTabContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customer, setCustomer] = useState<Schema["Customer"]["type"] | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -40,6 +42,29 @@ function CreateTicketContent() {
     category: "SUPPORT" as TicketCategory,
     customerId: "",
   });
+
+  // Fetch customer details if customerId is provided in URL
+  useEffect(() => {
+    async function fetchCustomer() {
+      const customerId = searchParams.get('customerId');
+      if (customerId) {
+        try {
+          const response = await client.models.Customer.get({ id: customerId });
+          if (response.data) {
+            setCustomer(response.data);
+            setFormData(prev => ({
+              ...prev,
+              customerId
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching customer:', error);
+        }
+      }
+    }
+
+    fetchCustomer();
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -55,19 +80,30 @@ function CreateTicketContent() {
 
     setIsSubmitting(true);
     try {
-      const response = await client.models.Ticket.create({
+      // Create the ticket first
+      const ticketResponse = await client.models.Ticket.create({
         ...formData,
         status: "OPEN" as TicketStatus,
         assignedAgentId: currentAgentId,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       });
 
-      if (response.data) {
+      if (ticketResponse.data) {
+        // Create a status change activity for the new ticket
+        await client.models.TicketActivity.create({
+          ticketId: ticketResponse.data.id,
+          type: "STATUS_CHANGE",
+          content: "Ticket created with status: OPEN",
+          agentId: "System",
+          createdAt: new Date().toISOString(),
+          oldValue: "Created",
+          newValue: "OPEN"
+        });
+
         // Close the New Ticket tab
         removeTab('/protected/tickets/new');
         // Navigate to the ticket details page
-        router.push(`/protected/tickets/${response.data.id}`);
+        router.push(`/protected/tickets/${ticketResponse.data.id}`);
       }
     } catch (error) {
       console.error("Error creating ticket:", error);
@@ -133,11 +169,13 @@ function CreateTicketContent() {
             </SelectField>
 
             <TextField
-              label="Customer ID"
+              label="Customer"
               name="customerId"
-              value={formData.customerId}
+              value={customer ? `${customer.name} (${customer.email})` : formData.customerId}
               onChange={handleChange}
               placeholder="Enter customer ID (optional)"
+              isReadOnly={Boolean(customer)}
+              descriptiveText={customer ? "Customer pre-selected from previous page" : undefined}
             />
 
             <Flex gap={tokens.space.medium} justifyContent="flex-end">

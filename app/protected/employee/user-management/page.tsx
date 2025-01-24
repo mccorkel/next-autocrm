@@ -7,7 +7,12 @@ import {
   CognitoIdentityProviderClient, 
   ListUsersCommand, 
   AdminListGroupsForUserCommand,
-  AdminAddUserToGroupCommand
+  AdminAddUserToGroupCommand,
+  AdminDisableUserCommand,
+  AdminEnableUserCommand,
+  AdminResetUserPasswordCommand,
+  AdminUpdateUserAttributesCommand,
+  AdminRemoveUserFromGroupCommand
 } from "@aws-sdk/client-cognito-identity-provider";
 import outputs from "@/amplify_outputs.json";
 import {
@@ -28,6 +33,8 @@ import {
   useTheme,
   Badge,
   SelectField,
+  Menu,
+  MenuItem,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 import { generateClient } from "aws-amplify/data";
@@ -234,6 +241,71 @@ function UserManagementContent() {
     }
   }
 
+  async function handleUserAction(username: string, email: string, action: string) {
+    try {
+      const session = await fetchAuthSession();
+      const credentials = session.credentials;
+      
+      if (!credentials) {
+        throw new Error("No credentials available");
+      }
+
+      const client = new CognitoIdentityProviderClient({
+        credentials: {
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey,
+          sessionToken: credentials.sessionToken
+        },
+        region: 'us-west-2'
+      });
+
+      switch (action) {
+        case 'toggle-status':
+          const user = users.find(u => u.username === username);
+          const command = user?.enabled 
+            ? new AdminDisableUserCommand({ UserPoolId: outputs.auth.user_pool_id, Username: username })
+            : new AdminEnableUserCommand({ UserPoolId: outputs.auth.user_pool_id, Username: username });
+          await client.send(command);
+          break;
+
+        case 'reset-password':
+          await client.send(new AdminResetUserPasswordCommand({
+            UserPoolId: outputs.auth.user_pool_id,
+            Username: username
+          }));
+          break;
+
+        case 'set-group':
+          const groupName = action.split('-')[2].toUpperCase();
+          // First remove from all groups
+          for (const group of ['AGENT', 'SUPER', 'ADMIN']) {
+            try {
+              await client.send(new AdminRemoveUserFromGroupCommand({
+                UserPoolId: outputs.auth.user_pool_id,
+                Username: username,
+                GroupName: group
+              }));
+            } catch (err) {
+              // Ignore errors if user wasn't in the group
+            }
+          }
+          // Then add to new group
+          await client.send(new AdminAddUserToGroupCommand({
+            UserPoolId: outputs.auth.user_pool_id,
+            Username: username,
+            GroupName: groupName
+          }));
+          break;
+      }
+
+      setSuccess(`Successfully performed action: ${action}`);
+      fetchUsers();
+    } catch (err) {
+      console.error(`Error performing action ${action}:`, err);
+      setError(err instanceof Error ? err.message : `Failed to perform action: ${action}`);
+    }
+  }
+
   if (loading) {
     return (
       <View 
@@ -319,8 +391,8 @@ function UserManagementContent() {
           <Table highlightOnHover={true}>
             <TableHead>
               <TableRow>
-                <TableCell as="th">Name</TableCell>
                 <TableCell as="th">Email</TableCell>
+                <TableCell as="th">Name</TableCell>
                 <TableCell as="th">Status</TableCell>
                 <TableCell as="th">Groups</TableCell>
                 <TableCell as="th">Actions</TableCell>
@@ -329,8 +401,30 @@ function UserManagementContent() {
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.username}>
+                  <TableCell>
+                    <a 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        // Find the agent with matching email
+                        client.models.Agent.list({
+                          filter: { email: { eq: user.email } }
+                        }).then(response => {
+                          if (response.data && response.data.length > 0) {
+                            router.push(`/protected/agents/${response.data[0].id}`);
+                          }
+                        });
+                      }}
+                      href="#"
+                      style={{
+                        color: '#007EB9',
+                        textDecoration: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {user.email}
+                    </a>
+                  </TableCell>
                   <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge
                       variation={user.enabled ? "success" : "error"}
@@ -354,12 +448,31 @@ function UserManagementContent() {
                     </Flex>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="small"
-                      onClick={() => {/* TODO: Add edit functionality */}}
+                    <Menu 
+                      trigger={
+                        <Button
+                          size="small"
+                        >
+                          Actions
+                        </Button>
+                      }
                     >
-                      Edit
-                    </Button>
+                      <MenuItem onClick={() => handleUserAction(user.username, user.email, 'toggle-status')}>
+                        {user.enabled ? 'Disable Account' : 'Enable Account'}
+                      </MenuItem>
+                      <MenuItem onClick={() => handleUserAction(user.username, user.email, 'set-group-agent')}>
+                        Set as Agent
+                      </MenuItem>
+                      <MenuItem onClick={() => handleUserAction(user.username, user.email, 'set-group-super')}>
+                        Set as Supervisor
+                      </MenuItem>
+                      <MenuItem onClick={() => handleUserAction(user.username, user.email, 'set-group-admin')}>
+                        Set as Admin
+                      </MenuItem>
+                      <MenuItem onClick={() => handleUserAction(user.username, user.email, 'reset-password')}>
+                        Reset Password
+                      </MenuItem>
+                    </Menu>
                   </TableCell>
                 </TableRow>
               ))}
