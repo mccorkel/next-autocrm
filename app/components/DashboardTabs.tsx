@@ -28,11 +28,18 @@ const StyledTab = styled(Tab)(({ theme }) => ({
 }));
 
 interface DashboardTabsProps {
-  totalTickets: number;
-  assignedTickets: number;
+  totalOpenTickets: number;
+  assignedOpenTickets: number;
+  assignedBlockedTickets: number;
+  assignedClosedTickets: number;
 }
 
-export default function DashboardTabs({ totalTickets, assignedTickets }: DashboardTabsProps) {
+export default function DashboardTabs({ 
+  totalOpenTickets, 
+  assignedOpenTickets,
+  assignedBlockedTickets,
+  assignedClosedTickets 
+}: DashboardTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentView = searchParams.get('view') || 'all';
@@ -42,10 +49,12 @@ export default function DashboardTabs({ totalTickets, assignedTickets }: Dashboa
     console.log('DashboardTabs view:', {
       currentView,
       searchParams: Object.fromEntries(searchParams.entries()),
-      totalTickets,
-      assignedTickets
+      totalOpenTickets,
+      assignedOpenTickets,
+      assignedBlockedTickets,
+      assignedClosedTickets
     });
-  }, [currentView, searchParams, totalTickets, assignedTickets]);
+  }, [currentView, searchParams, totalOpenTickets, assignedOpenTickets, assignedBlockedTickets, assignedClosedTickets]);
 
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
     console.log('Tab change:', { from: currentView, to: newValue });
@@ -55,8 +64,10 @@ export default function DashboardTabs({ totalTickets, assignedTickets }: Dashboa
   return (
     <Box sx={{ width: '100%', borderBottom: 1, borderColor: 'divider', mb: 3 }}>
       <StyledTabs value={currentView} onChange={handleChange}>
-        <StyledTab label={`All Tickets (${totalTickets})`} value="all" />
-        <StyledTab label={`My Tickets (${assignedTickets})`} value="assigned" />
+        <StyledTab label={`All Open Tickets (${totalOpenTickets})`} value="all" />
+        <StyledTab label={`My Open Tickets (${assignedOpenTickets})`} value="assigned" />
+        <StyledTab label={`My Blocked Tickets (${assignedBlockedTickets})`} value="blocked" />
+        <StyledTab label={`My Closed Tickets (${assignedClosedTickets})`} value="closed" />
       </StyledTabs>
     </Box>
   );

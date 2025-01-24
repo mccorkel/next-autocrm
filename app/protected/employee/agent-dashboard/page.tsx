@@ -37,8 +37,10 @@ function AgentDashboardContent() {
   const { currentAgentId, isInitialized } = useAgent();
   const { translations } = useLanguage();
   const [tickets, setTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
-  const [allTickets, setAllTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
-  const [assignedTickets, setAssignedTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
+  const [allOpenTickets, setAllOpenTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
+  const [assignedOpenTickets, setAssignedOpenTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
+  const [assignedBlockedTickets, setAssignedBlockedTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
+  const [assignedClosedTickets, setAssignedClosedTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
   const [agents, setAgents] = useState<Array<Schema["Agent"]["type"]>>([]);
   const [userGroups, setUserGroups] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,30 +96,91 @@ function AgentDashboardContent() {
 
     setLoading(true);
     try {
-      // Fetch all tickets
-      const allTicketsResponse = await client.models.Ticket.list();
-      const allTicketsData = allTicketsResponse.data || [];
-      setAllTickets(allTicketsData);
-
-      // Fetch assigned tickets
-      const assignedTicketsResponse = await client.models.Ticket.list({
+      // Fetch all open tickets
+      const allOpenTicketsResponse = await client.models.Ticket.list({
         filter: {
-          assignedAgentId: {
-            eq: currentAgentId as string
+          status: {
+            ne: 'CLOSED' as const
           }
         }
       });
-      const assignedTicketsData = assignedTicketsResponse.data || [];
-      setAssignedTickets(assignedTicketsData);
+      const allOpenTicketsData = allOpenTicketsResponse.data || [];
+      setAllOpenTickets(allOpenTicketsData);
+
+      // Fetch assigned open tickets
+      const assignedOpenTicketsResponse = await client.models.Ticket.list({
+        filter: {
+          and: [
+            { assignedAgentId: { eq: currentAgentId } },
+            { 
+              or: [
+                { status: { eq: 'OPEN' as const } },
+                { status: { eq: 'IN_PROGRESS' as const } },
+                { status: { eq: 'RESOLVED' as const } }
+              ]
+            }
+          ]
+        }
+      });
+      const assignedOpenTicketsData = assignedOpenTicketsResponse.data || [];
+      setAssignedOpenTickets(assignedOpenTicketsData);
+
+      // Fetch assigned blocked tickets
+      const assignedBlockedTicketsResponse = await client.models.Ticket.list({
+        filter: {
+          and: [
+            { assignedAgentId: { eq: currentAgentId } },
+            { status: { eq: 'BLOCKED' as const } }
+          ]
+        }
+      });
+      const assignedBlockedTicketsData = assignedBlockedTicketsResponse.data || [];
+      setAssignedBlockedTickets(assignedBlockedTicketsData);
+
+      // Fetch assigned closed tickets
+      const assignedClosedTicketsResponse = await client.models.Ticket.list({
+        filter: {
+          and: [
+            { assignedAgentId: { eq: currentAgentId } },
+            { status: { eq: 'CLOSED' as const } }
+          ]
+        }
+      });
+      const assignedClosedTicketsData = assignedClosedTicketsResponse.data || [];
+      setAssignedClosedTickets(assignedClosedTicketsData);
 
       // Set current view tickets
-      const currentTickets = currentView === 'assigned' ? assignedTicketsData : allTicketsData;
+      let currentTickets;
+      switch (currentView) {
+        case 'blocked':
+          currentTickets = assignedBlockedTicketsData;
+          break;
+        case 'closed':
+          currentTickets = assignedClosedTicketsData;
+          break;
+        case 'assigned':
+          currentTickets = assignedOpenTicketsData;
+          break;
+        default:
+          currentTickets = allOpenTicketsData;
+      }
+
       const sortedTickets = [...currentTickets].sort((a, b) => {
         const dateA = new Date(a.createdAt || "").getTime();
         const dateB = new Date(b.createdAt || "").getTime();
         return dateB - dateA;
       });
       setTickets(sortedTickets);
+
+      // Log the results for debugging
+      console.log('Fetched tickets:', {
+        allOpenTickets: allOpenTicketsData.length,
+        assignedOpenTickets: assignedOpenTicketsData.length,
+        assignedBlockedTickets: assignedBlockedTicketsData.length,
+        assignedClosedTickets: assignedClosedTicketsData.length,
+        currentView,
+        displayedTickets: sortedTickets.length
+      });
     } catch (error) {
       console.error('Error fetching tickets:', error);
     } finally {
@@ -183,8 +246,10 @@ function AgentDashboardContent() {
           </Flex>
           
           <DashboardTabs 
-            totalTickets={allTickets.length} 
-            assignedTickets={assignedTickets.length} 
+            totalOpenTickets={allOpenTickets.length} 
+            assignedOpenTickets={assignedOpenTickets.length}
+            assignedBlockedTickets={assignedBlockedTickets.length}
+            assignedClosedTickets={assignedClosedTickets.length}
           />
 
           <Table
