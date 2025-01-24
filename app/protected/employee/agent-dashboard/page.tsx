@@ -173,10 +173,10 @@ function AgentDashboardContent() {
       <Card>
         <Flex direction="column" gap={tokens.space.medium}>
           <Flex justifyContent="space-between" alignItems="center">
-            <Heading level={2}>Ticket Management</Heading>
+            <Heading level={2}>Tickets</Heading>
             <Button
-              onClick={() => router.push('/protected/tickets/new')}
               variation="primary"
+              onClick={() => router.push('/protected/tickets/new')}
             >
               Create Ticket
             </Button>

@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { View, useTheme } from '@aws-amplify/ui-react';
 import { useTabContext } from '@/app/contexts/TabContext';
 import { useAgent } from '@/app/contexts/AgentContext';
-import { Tabs, Tab, Box, IconButton } from '@mui/material';
-import { Close as CloseIcon, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Tabs, Tab, Box, SvgIcon } from '@mui/material';
+import { Close as CloseIconMui } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 
 interface Tab {
@@ -45,11 +45,21 @@ const StyledTab = styled(Tab)(({ theme }) => ({
   },
 }));
 
-const CloseButton = styled(IconButton)(({ theme }) => ({
-  padding: 4,
-  marginLeft: 8,
+const TabCloseButton = styled('span')(({ theme }) => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '20px',
+  height: '20px',
+  marginLeft: '8px',
+  borderRadius: '50%',
+  cursor: 'pointer',
   '&:hover': {
     backgroundColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  '& svg': {
+    width: '1rem',
+    height: '1rem',
   },
 }));
 
@@ -84,6 +94,22 @@ export default function EmployeeTabs({ userGroups }: Props) {
 
   const allTabs = [...staticTabs, ...dynamicTabs];
 
+  // Find the closest matching tab for the current pathname
+  const getActiveTab = (currentPath: string) => {
+    // If the path is exactly matched, return it
+    if (allTabs.some(tab => tab.value === currentPath)) {
+      return currentPath;
+    }
+
+    // If we're on the new ticket page, return the dashboard
+    if (currentPath === '/protected/tickets/new') {
+      return '/protected/employee/agent-dashboard';
+    }
+
+    // For other paths, return the dashboard as default
+    return '/protected/employee/agent-dashboard';
+  };
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
     router.push(newValue);
   };
@@ -106,8 +132,10 @@ export default function EmployeeTabs({ userGroups }: Props) {
     const customerMatch = pathname.match(/^\/protected\/customers\/(.+)$/);
     const agentMatch = pathname.match(/^\/protected\/agents\/(.+)$/);
 
-    if (ticketMatch) {
+    if (ticketMatch && ticketMatch[1] !== 'new') {
       updateTabData(pathname, { label: `Ticket #${ticketMatch[1]}` });
+    } else if (pathname === '/protected/tickets/new') {
+      updateTabData(pathname, { label: 'New Ticket' });
     } else if (customerMatch) {
       updateTabData(pathname, { label: `Customer #${customerMatch[1]}` });
     } else if (agentMatch) {
@@ -120,7 +148,7 @@ export default function EmployeeTabs({ userGroups }: Props) {
   return (
     <Box sx={{ width: '100%', bgcolor: 'background.paper' }}>
       <StyledTabs
-        value={pathname}
+        value={getActiveTab(pathname)}
         onChange={handleTabChange}
         variant="scrollable"
         scrollButtons="auto"
@@ -133,13 +161,13 @@ export default function EmployeeTabs({ userGroups }: Props) {
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 {tab.label}
                 {!staticTabs.some(staticTab => staticTab.value === tab.value) && (
-                  <CloseButton
-                    size="small"
+                  <TabCloseButton
                     onClick={(e) => handleCloseTab(e, tab)}
+                    role="button"
                     aria-label="close tab"
                   >
-                    <CloseIcon fontSize="small" />
-                  </CloseButton>
+                    <SvgIcon component={CloseIconMui} />
+                  </TabCloseButton>
                 )}
               </Box>
             }

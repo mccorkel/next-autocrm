@@ -1,128 +1,224 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
-import { Amplify } from "aws-amplify";
-import outputs from "@/amplify_outputs.json";
 import {
+  Badge,
   Button,
   Card,
   Flex,
   Heading,
   Text,
-  TextAreaField,
-  Badge,
+  View,
+  useTheme,
 } from "@aws-amplify/ui-react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useAgent } from "@/app/contexts/AgentContext";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { Suspense } from "react";
 
-Amplify.configure(outputs);
 const client = generateClient<Schema>();
 
-type TicketType = Schema['Ticket']['type'];
-type CommentType = Schema['Comment']['type'];
+type BadgeVariation = "info" | "warning" | "error" | "success";
 
-export default function TicketDetail() {
-  const params = useParams();
-  const ticketId = typeof params.id === 'string' ? params.id : '';
-  const [ticket, setTicket] = useState<TicketType | null>(null);
-  const [comments, setComments] = useState<CommentType[]>([]);
-  const [newComment, setNewComment] = useState("");
+function TicketDetailsContent() {
   const router = useRouter();
+  const params = useParams();
+  const { tokens } = useTheme();
+  const { currentAgentId, isInitialized } = useAgent();
+  const { translations } = useLanguage();
+  const [ticket, setTicket] = useState<Schema["Ticket"]["type"] | null>(null);
+  const [customer, setCustomer] = useState<Schema["Customer"]["type"] | null>(null);
+  const [assignedAgent, setAssignedAgent] = useState<Schema["Agent"]["type"] | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (ticketId) {
-      fetchTicket();
-      fetchComments();
-    }
-  }, [ticketId]);
+    async function fetchTicketDetails() {
+      if (!params.id) return;
 
-  async function fetchTicket() {
-    if (!ticketId) return;
-    
-    try {
-      const result = await client.models.Ticket.get({
-        id: ticketId
-      });
-      if (result.data) {
-        setTicket(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching ticket:", error);
-    }
-  }
+      try {
+        setLoading(true);
+        // Fetch ticket
+        const ticketResponse = await client.models.Ticket.get({ id: params.id as string });
+        if (ticketResponse.data) {
+          setTicket(ticketResponse.data);
 
-  async function fetchComments() {
-    if (!ticketId) return;
+          // Fetch customer if available
+          if (ticketResponse.data.customerId) {
+            const customerResponse = await client.models.Customer.get({ 
+              id: ticketResponse.data.customerId 
+            });
+            setCustomer(customerResponse.data);
+          }
 
-    try {
-      const result = await client.models.Comment.list({
-        filter: {
-          ticketId: { eq: ticketId }
+          // Fetch assigned agent if available
+          if (ticketResponse.data.assignedAgentId) {
+            const agentResponse = await client.models.Agent.get({ 
+              id: ticketResponse.data.assignedAgentId 
+            });
+            setAssignedAgent(agentResponse.data);
+          }
         }
-      });
-      if (result.data) {
-        setComments(result.data);
+      } catch (error) {
+        console.error("Error fetching ticket details:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching comments:", error);
+    }
+
+    fetchTicketDetails();
+  }, [params.id]);
+
+  function getPriorityColor(priority: string | null | undefined): BadgeVariation {
+    switch (priority) {
+      case "URGENT":
+        return "error";
+      case "HIGH":
+        return "warning";
+      case "MEDIUM":
+        return "info";
+      default:
+        return "info";
     }
   }
 
-  async function addComment() {
-    if (!newComment.trim()) return;
-
-    try {
-      await client.models.Comment.create({
-        content: newComment,
-        ticketId: ticketId,
-        authorId: "current-user", // This should be the actual logged-in user's ID
-        createdAt: new Date().toISOString(),
-      });
-      setNewComment("");
-      fetchComments();
-    } catch (error) {
-      console.error("Error adding comment:", error);
+  function getStatusColor(status: string | null | undefined): BadgeVariation {
+    switch (status) {
+      case "OPEN":
+        return "warning";
+      case "IN_PROGRESS":
+        return "info";
+      case "RESOLVED":
+        return "success";
+      case "CLOSED":
+        return "info";
+      default:
+        return "info";
     }
+  }
+
+  if (loading) {
+    return (
+      <View padding={tokens.space.large}>
+        <Text>Loading ticket details...</Text>
+      </View>
+    );
   }
 
   if (!ticket) {
-    return <div>Loading...</div>;
+    return (
+      <View padding={tokens.space.large}>
+        <Text>Ticket not found</Text>
+      </View>
+    );
   }
 
   return (
-    <Flex direction="column" padding="1rem" gap="1rem">
+    <View padding={tokens.space.large}>
       <Card>
-        <Heading level={2}>{ticket.title}</Heading>
-        <Text>{ticket.description}</Text>
-        <Flex gap="0.5rem" marginTop="1rem">
-          <Badge variation="info">{ticket.status}</Badge>
-          <Badge variation="warning">{ticket.priority}</Badge>
-        </Flex>
-      </Card>
+        <Flex direction="column" gap={tokens.space.medium}>
+          <Flex justifyContent="space-between" alignItems="center">
+            <Heading level={2}>{ticket.title}</Heading>
+            <Flex gap={tokens.space.small}>
+              <Badge variation={getPriorityColor(ticket.priority)}>
+                {ticket.priority}
+              </Badge>
+              <Badge variation={getStatusColor(ticket.status)}>
+                {ticket.status}
+              </Badge>
+            </Flex>
+          </Flex>
 
-      <Card>
-        <Heading level={3}>Comments</Heading>
-        <Flex direction="column" gap="1rem">
-          {comments.map(comment => (
-            <Card key={comment.id}>
-              <Text>{comment.content}</Text>
-              <Text variation="tertiary">
-                {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}
+          <Text>{ticket.description}</Text>
+
+          <Flex direction="column" gap={tokens.space.small}>
+            <Text>
+              <strong>Category:</strong> {ticket.category}
+            </Text>
+            <Text>
+              <strong>Created:</strong> {new Date(ticket.createdAt || "").toLocaleString()}
+            </Text>
+            <Text>
+              <strong>Last Updated:</strong> {new Date(ticket.updatedAt || "").toLocaleString()}
+            </Text>
+            {customer && (
+              <Text>
+                <strong>Customer:</strong>{" "}
+                <a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    router.push(`/protected/customers/${customer.id}`);
+                  }}
+                  href="#"
+                  style={{
+                    color: '#007EB9',
+                    textDecoration: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {customer.name} ({customer.email})
+                </a>
               </Text>
-            </Card>
-          ))}
-        </Flex>
+            )}
+            {assignedAgent && (
+              <Text>
+                <strong>Assigned To:</strong>{" "}
+                <a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    router.push(`/protected/agents/${assignedAgent.id}`);
+                  }}
+                  href="#"
+                  style={{
+                    color: '#007EB9',
+                    textDecoration: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {assignedAgent.email}
+                </a>
+              </Text>
+            )}
+          </Flex>
 
-        <Flex direction="column" gap="1rem" marginTop="1rem">
-          <TextAreaField
-            label="Add a comment"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-          />
-          <Button onClick={addComment}>Add Comment</Button>
+          <Flex gap={tokens.space.medium} justifyContent="flex-end">
+            <Button
+              onClick={() => router.push('/protected/employee/agent-dashboard')}
+              variation="link"
+            >
+              Back to Dashboard
+            </Button>
+            {ticket.status !== 'CLOSED' && (
+              <Button
+                variation="primary"
+                onClick={async () => {
+                  if (!isInitialized) return;
+                  try {
+                    await client.models.Ticket.update({
+                      id: ticket.id,
+                      status: 'CLOSED' as const
+                    });
+                    router.push('/protected/employee/agent-dashboard');
+                  } catch (error) {
+                    console.error('Error closing ticket:', error);
+                  }
+                }}
+              >
+                Close Ticket
+              </Button>
+            )}
+          </Flex>
         </Flex>
       </Card>
-    </Flex>
+    </View>
+  );
+}
+
+export default function TicketDetailsPage() {
+  return (
+    <Suspense>
+      <TicketDetailsContent />
+    </Suspense>
   );
 }
