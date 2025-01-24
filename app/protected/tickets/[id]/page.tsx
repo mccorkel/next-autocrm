@@ -86,7 +86,7 @@ function TicketDetailsContent() {
 
           // Fetch activities
           const activitiesResponse = await client.models.TicketActivity.list({
-            filter: { id: { eq: params.id } }
+            filter: { ticketId: { eq: params.id } }
           });
           if (activitiesResponse.data) {
             // Sort activities by createdAt in descending order

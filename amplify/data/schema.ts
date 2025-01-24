@@ -55,6 +55,7 @@ const schema = a.schema({
     name: a.string(),
     email: a.string(),
     assignedTickets: a.hasMany('Ticket', ['assignedAgentId']),
+    activities: a.hasMany('TicketActivity', ['agentId']),
     assignedCategories: a.string().array(),
     status: a.enum(['AVAILABLE', 'BUSY', 'OFFLINE']),
     maxConcurrentTickets: a.integer(),
