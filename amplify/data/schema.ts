@@ -11,20 +11,20 @@ const schema = a.schema({
     assignedAgentId: a.string(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
-    comments: a.hasMany('Comment', ['ticketId']),
-    activities: a.hasMany('TicketActivity', ['ticketId']),
-    customer: a.belongsTo('Customer', ['customerId']),
-    assignedAgent: a.belongsTo('Agent', ['assignedAgentId']),
+    comments: a.hasMany('Comment', 'ticket'),
+    activities: a.hasMany('TicketActivity', 'ticket'),
+    customer: a.belongsTo('Customer', 'tickets'),
+    assignedAgent: a.belongsTo('Agent', 'assignedTickets'),
     category: a.enum(['ACCOUNT', 'BILLING', 'SUPPORT', 'SALES', 'OTHER']),
     emailThreadId: a.string(),
     lastEmailReceivedAt: a.datetime(),
-    notificationPreferences: a.hasOne('NotificationPreference', ['ticketId']),
+    notificationPreferences: a.hasOne('NotificationPreference', 'ticket'),
   }).authorization(allow => allow.authenticated()),
 
   NotificationPreference: a.model({
     id: a.id(),
     ticketId: a.string(),
-    ticket: a.belongsTo('Ticket', ['ticketId']),
+    ticket: a.belongsTo('Ticket', 'notificationPreferences'),
     emailEnabled: a.boolean(),
     smsEnabled: a.boolean(),
     emailAddress: a.string(),
@@ -46,22 +46,22 @@ const schema = a.schema({
     oldValue: a.string(),
     newValue: a.string(),
     createdAt: a.datetime(),
-    ticket: a.belongsTo('Ticket', ['ticketId']),
-    agent: a.belongsTo('Agent', ['agentId']),
+    ticket: a.belongsTo('Ticket', 'activities'),
+    agent: a.belongsTo('Agent', 'activities'),
   }).authorization(allow => allow.authenticated()),
 
   Agent: a.model({
     id: a.id(),
     name: a.string(),
     email: a.string(),
-    assignedTickets: a.hasMany('Ticket', ['assignedAgentId']),
-    activities: a.hasMany('TicketActivity', ['agentId']),
+    assignedTickets: a.hasMany('Ticket', 'assignedAgent'),
+    activities: a.hasMany('TicketActivity', 'agent'),
     assignedCategories: a.string().array(),
     status: a.enum(['AVAILABLE', 'BUSY', 'OFFLINE']),
     maxConcurrentTickets: a.integer(),
     supervisorId: a.string(),
-    supervisor: a.belongsTo('Agent', ['supervisorId']),
-    agents: a.hasMany('Agent', ['supervisorId']),
+    supervisor: a.belongsTo('Agent', 'agents'),
+    agents: a.hasMany('Agent', 'supervisor'),
   }).authorization(allow => allow.authenticated()),
 
   Comment: a.model({
@@ -70,7 +70,7 @@ const schema = a.schema({
     authorId: a.string(),
     ticketId: a.string(),
     createdAt: a.datetime(),
-    ticket: a.belongsTo('Ticket', ['ticketId'])
+    ticket: a.belongsTo('Ticket', 'comments'),
   }).authorization(allow => allow.authenticated()),
 
   Customer: a.model({
@@ -79,7 +79,7 @@ const schema = a.schema({
     email: a.string(),
     phone: a.string(),
     company: a.string(),
-    tickets: a.hasMany('Ticket', ['customerId'])
+    tickets: a.hasMany('Ticket', 'customer'),
   }).authorization(allow => allow.authenticated()),
 });
 
