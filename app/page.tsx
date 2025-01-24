@@ -167,8 +167,8 @@ function LandingContent() {
           <Flex justifyContent="center" padding={tokens.space.small}>
             <Button
               variation="primary"
+              onClick={() => router.push('/protected/employee/agent-dashboard')}
               size="large"
-              onClick={() => router.push('/protected/employee')}
             >
               {translations.landing.hero.getStarted}
             </Button>

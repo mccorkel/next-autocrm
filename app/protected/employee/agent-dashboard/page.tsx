@@ -112,13 +112,7 @@ function AgentDashboardContent() {
         filter: {
           and: [
             { assignedAgentId: { eq: currentAgentId } },
-            { 
-              or: [
-                { status: { eq: 'OPEN' as const } },
-                { status: { eq: 'IN_PROGRESS' as const } },
-                { status: { eq: 'RESOLVED' as const } }
-              ]
-            }
+            { status: { eq: 'OPEN' } }
           ]
         }
       });
