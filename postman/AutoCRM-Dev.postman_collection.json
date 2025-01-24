@@ -1,0 +1,33 @@
+{
+  "info": {
+    "name": "AutoCRM-Dev",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Process Email",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/email",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "email"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"messageId\": \"test-email-123\",\n    \"timestamp\": \"2024-03-14T12:00:00Z\",\n    \"source\": \"customer@example.com\",\n    \"subject\": \"Test Support Request\"\n}"
+        },
+        "description": "Process an incoming email notification from SES"
+      },
+      "response": []
+    }
+  ]
+} 

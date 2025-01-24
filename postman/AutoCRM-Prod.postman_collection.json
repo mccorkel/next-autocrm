@@ -1,0 +1,32 @@
+{
+  "info": {
+    "name": "AutoCRM-Prod",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Process Email",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "https://crm.tigerpanda.tv/api/email",
+          "protocol": "https",
+          "host": ["crm.tigerpanda.tv"],
+          "path": ["api", "email"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"messageId\": \"test-email-123\",\n    \"timestamp\": \"2024-03-14T12:00:00Z\",\n    \"source\": \"customer@example.com\",\n    \"subject\": \"Test Support Request\"\n}"
+        },
+        "description": "Process an incoming email notification from SES"
+      },
+      "response": []
+    }
+  ]
+} 

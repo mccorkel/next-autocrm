@@ -50,3 +50,4 @@ redis-data/
 .cloudfront/
 cdn-config.json
 distribution-config.json
+logs/email-api.log
