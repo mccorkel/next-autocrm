@@ -8,6 +8,10 @@ import { useAgent } from '@/app/contexts/AgentContext';
 import { Tabs, Tab, Box, SvgIcon } from '@mui/material';
 import { Close as CloseIconMui } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/amplify/data/resource";
+
+const client = generateClient<Schema>();
 
 interface Tab {
   label: string;
@@ -143,15 +147,59 @@ export default function EmployeeTabs({ userGroups }: Props) {
     const agentMatch = pathname.match(/^\/protected\/agents\/(.+)$/);
 
     if (ticketMatch && ticketMatch[1] !== 'new') {
-      updateTabData(pathname, { label: `Ticket #${ticketMatch[1]}` });
+      // For ticket details, fetch the ticket to get its title
+      const fetchTicket = async () => {
+        try {
+          const response = await client.models.Ticket.get({ id: ticketMatch[1] });
+          if (response.data) {
+            const title = response.data.title || '';
+            updateTabData(pathname, { 
+              label: `Ticket "${title.length > 30 ? title.slice(0, 27) + '...' : title}"` 
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching ticket:', error);
+        }
+      };
+      fetchTicket();
     } else if (pathname === '/protected/tickets/new') {
       updateTabData(pathname, { label: 'New Ticket' });
-    } else if (customerMatch) {
-      updateTabData(pathname, { label: `Customer #${customerMatch[1]}` });
+    } else if (customerMatch && customerMatch[1] !== 'new') {
+      // For customer details, fetch the customer to get their name
+      const fetchCustomer = async () => {
+        try {
+          const response = await client.models.Customer.get({ id: customerMatch[1] });
+          if (response.data) {
+            const displayName = response.data.name || response.data.email || '';
+            updateTabData(pathname, { 
+              label: `Customer "${displayName.length > 30 ? displayName.slice(0, 27) + '...' : displayName}"` 
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching customer:', error);
+        }
+      };
+      fetchCustomer();
+    } else if (pathname === '/protected/customers/new') {
+      updateTabData(pathname, { label: 'New Customer' });
     } else if (agentMatch) {
-      const agentId = agentMatch[1];
-      const label = currentAgentId === agentId ? 'My Profile' : `Agent #${agentId}`;
-      updateTabData(pathname, { label });
+      // For agent details, fetch the agent to get their name
+      const fetchAgent = async () => {
+        try {
+          const response = await client.models.Agent.get({ id: agentMatch[1] });
+          if (response.data) {
+            const displayName = response.data.name || response.data.email || '';
+            updateTabData(pathname, { 
+              label: currentAgentId === agentMatch[1] ? 
+                'My Profile' : 
+                `Agent "${displayName.length > 30 ? displayName.slice(0, 27) + '...' : displayName}"` 
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching agent:', error);
+        }
+      };
+      fetchAgent();
     }
   }, [pathname, updateTabData, currentAgentId]);
 
