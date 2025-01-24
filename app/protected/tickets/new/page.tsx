@@ -24,7 +24,7 @@ const client = generateClient<Schema>();
 
 type TicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 type TicketCategory = "ACCOUNT" | "BILLING" | "SUPPORT" | "SALES" | "OTHER";
-type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+type TicketStatus = "OPEN" | "IN_PROGRESS" | "BLOCKED" | "CLOSED";
 
 function CreateTicketContent() {
   const router = useRouter();
