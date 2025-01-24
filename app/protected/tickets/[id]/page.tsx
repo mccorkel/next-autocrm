@@ -427,8 +427,8 @@ function TicketDetailsContent() {
                   >
                     Add Note
                   </Button>
-                </Flex>
-              </Card>
+        </Flex>
+      </Card>
 
               {/* Activity list */}
               <Flex direction="column" gap={tokens.space.small}>
@@ -466,7 +466,7 @@ function TicketDetailsContent() {
                         )}
                         <Text color={tokens.colors.font.tertiary}>
                           {new Date(activity.createdAt || "").toLocaleString()}
-                        </Text>
+              </Text>
                       </Flex>
                       <Text>{activity.content}</Text>
                       {(activity.type === 'PRIORITY_CHANGE' || activity.type === 'STATUS_CHANGE') && (
@@ -482,8 +482,8 @@ function TicketDetailsContent() {
                         </Flex>
                       )}
                     </Flex>
-                  </Card>
-                ))}
+            </Card>
+          ))}
                 {activities.length === 0 && (
                   <Text color={tokens.colors.font.tertiary}>No activity yet</Text>
                 )}
@@ -582,7 +582,7 @@ function TicketDetailsContent() {
                 <Text>
                   <strong>Last Updated:</strong> {new Date(ticket.updatedAt || "").toLocaleString()}
                 </Text>
-              </Flex>
+        </Flex>
 
               {/* Notification Preferences */}
               <Flex direction="column" gap={tokens.space.small}>
@@ -729,9 +729,9 @@ function TicketDetailsContent() {
                   </Card>
                 )}
               </Flex>
-            </Flex>
-          </Card>
         </Flex>
+      </Card>
+    </Flex>
       </Flex>
     </View>
   );

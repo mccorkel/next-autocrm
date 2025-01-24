@@ -17,6 +17,9 @@ import {
   useTheme,
   Text,
   Divider,
+  Button,
+  Alert,
+  TextField,
 } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 
@@ -29,6 +32,13 @@ export default function CustomerDetails({ params }: { params: { customerId: stri
   const router = useRouter();
   const [customer, setCustomer] = useState<Schema["Customer"]["type"] | null>(null);
   const [tickets, setTickets] = useState<Array<Schema["Ticket"]["type"]>>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    company: '',
+    phone: '',
+  });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCustomerDetails();
@@ -40,9 +50,15 @@ export default function CustomerDetails({ params }: { params: { customerId: stri
       const { data } = await client.models.Customer.get({ id: params.customerId });
       if (data) {
         setCustomer(data);
+        setEditForm({
+          name: data.name || '',
+          company: data.company || '',
+          phone: data.phone || '',
+        });
       }
     } catch (error) {
       console.error("Error fetching customer:", error);
+      setError("Failed to load customer details");
     }
   }
 
@@ -64,6 +80,27 @@ export default function CustomerDetails({ params }: { params: { customerId: stri
       setTickets(sortedTickets);
     } catch (error) {
       console.error("Error fetching tickets:", error);
+    }
+  }
+
+  async function handleSave() {
+    if (!customer) return;
+
+    try {
+      const response = await client.models.Customer.update({
+        id: customer.id,
+        name: editForm.name,
+        company: editForm.company,
+        phone: editForm.phone,
+      });
+
+      if (response.data) {
+        setCustomer(response.data);
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error("Error updating customer:", error);
+      setError("Failed to update customer details");
     }
   }
 
@@ -97,7 +134,21 @@ export default function CustomerDetails({ params }: { params: { customerId: stri
       padding={tokens.space.large}
       width="100%"
     >
-      <Heading level={1}>Customer Details</Heading>
+      <Flex justifyContent="space-between" alignItems="center">
+        <Heading level={1}>Customer Details</Heading>
+        <Button
+          onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+          variation="primary"
+        >
+          {isEditing ? 'Save Changes' : 'Edit Details'}
+        </Button>
+      </Flex>
+
+      {error && (
+        <Alert variation="error">
+          {error}
+        </Alert>
+      )}
       
       <Card
         padding={tokens.space.medium}
@@ -107,18 +158,48 @@ export default function CustomerDetails({ params }: { params: { customerId: stri
         <Flex direction="column" gap={tokens.space.small}>
           <Heading level={3}>Profile Information</Heading>
           <Flex direction="column" gap={tokens.space.xsmall}>
-            <Text>
-              <strong>ID:</strong> {customer.id}
-            </Text>
-            <Text>
-              <strong>Name:</strong> {customer.name}
-            </Text>
-            <Text>
-              <strong>Email:</strong> {customer.email}
-            </Text>
-            <Text>
-              <strong>Created:</strong> {new Date(customer.createdAt || "").toLocaleDateString()}
-            </Text>
+            {isEditing ? (
+              <>
+                <TextField
+                  label="Name"
+                  value={editForm.name}
+                  onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+                <TextField
+                  label="Company"
+                  value={editForm.company}
+                  onChange={e => setEditForm(prev => ({ ...prev, company: e.target.value }))}
+                />
+                <TextField
+                  label="Phone"
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                />
+              </>
+            ) : (
+              <>
+                <Text>
+                  <strong>ID:</strong> {customer.id}
+                </Text>
+                <Text>
+                  <strong>Name:</strong> {customer.name}
+                </Text>
+                <Text>
+                  <strong>Email:</strong> {customer.email}
+                </Text>
+                <Text>
+                  <strong>Company:</strong> {customer.company || 'N/A'}
+                </Text>
+                <Text>
+                  <strong>Phone:</strong> {customer.phone || 'N/A'}
+                </Text>
+                <Text>
+                  <strong>Created:</strong> {new Date(customer.createdAt || "").toLocaleDateString()}
+                </Text>
+              </>
+            )}
           </Flex>
         </Flex>
       </Card>
@@ -184,6 +265,13 @@ export default function CustomerDetails({ params }: { params: { customerId: stri
                     </TableCell>
                   </TableRow>
                 ))}
+                {tickets.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5}>
+                      <Text textAlign="center">No tickets found</Text>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </View>
