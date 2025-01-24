@@ -8,17 +8,19 @@ import { logEmailAPI } from '@/app/utils/logger';
 import outputs from '@/amplify_outputs.json';
 
 // Configure Amplify with API key
-const config = {
+const apiConfig = {
   ...outputs,
   API: {
     GraphQL: {
+      apiKey: process.env.EMAIL_PROCESSING_API_KEY,
       endpoint: outputs.data.url,
-      defaultAuthMode: 'apiKey',
-      apiKey: process.env.EMAIL_PROCESSING_API_KEY
+      region: process.env.NEXT_PUBLIC_AWS_REGION,
+      authenticationType: 'API_KEY'
     }
   }
 };
-Amplify.configure(config);
+
+Amplify.configure(apiConfig);
 
 // Create client with API key auth
 const client = generateClient<Schema>({
