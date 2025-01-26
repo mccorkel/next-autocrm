@@ -26,7 +26,7 @@ export default function SuccessPage() {
     >
       <Card width="100%" maxWidth="800px" margin="0 auto">
         <Flex direction="column" gap={tokens.space.medium} alignItems="center" textAlign="center">
-          <CheckCircle size={64} color={tokens.colors.green[60]} />
+          <CheckCircle size={64} color={tokens.colors.green[60].toString()} />
           
           <Heading level={1}>{translations.contact.success}</Heading>
           
