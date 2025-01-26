@@ -14,7 +14,21 @@ interface EmailParams {
   objectKey: string;
 }
 
-Amplify.configure(outputs);
+try {
+  Amplify.configure(outputs);
+} catch (error: any) {
+  logEmailAPI('ERROR', 'Failed to configure Amplify', {
+    error: {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      details: error?.response?.errors || error?.errors || []
+    },
+    outputs: JSON.stringify(outputs)
+  });
+  throw error;
+}
+
 const s3Client = new S3Client({ region: 'us-west-2' });
 
 // Initialize client after authentication
@@ -22,12 +36,43 @@ let client: ReturnType<typeof generateClient<Schema>> | null = null;
 
 async function getAuthenticatedClient() {
   if (!client) {
-    // Authenticate with service account credentials
-    await signIn({
-      username: process.env.SERVICE_ACCOUNT_EMAIL || '',
-      password: process.env.SERVICE_ACCOUNT_PASSWORD || ''
-    });
-    client = generateClient<Schema>();
+    try {
+      logEmailAPI('INFO', 'Attempting service account sign in', {
+        hasEmail: !!process.env.SERVICE_ACCOUNT_EMAIL,
+        hasPassword: !!process.env.SERVICE_ACCOUNT_PASSWORD
+      });
+      
+      // Authenticate with service account credentials
+      const signInResult = await signIn({
+        username: process.env.SERVICE_ACCOUNT_EMAIL || '',
+        password: process.env.SERVICE_ACCOUNT_PASSWORD || ''
+      });
+      
+      logEmailAPI('INFO', 'Service account sign in result', {
+        isSuccess: !!signInResult.isSignedIn,
+        hasNextStep: !!signInResult.nextStep,
+        nextStep: signInResult.nextStep
+      });
+
+      if (!signInResult.isSignedIn) {
+        throw new Error(`Sign in failed: ${JSON.stringify(signInResult)}`);
+      }
+
+      client = generateClient<Schema>();
+      logEmailAPI('INFO', 'Generated authenticated client', {
+        hasClient: !!client
+      });
+    } catch (error: any) {
+      logEmailAPI('ERROR', 'Failed to authenticate service account', {
+        error: {
+          name: error?.name,
+          message: error?.message,
+          stack: error?.stack,
+          details: error?.response?.errors || error?.errors || []
+        }
+      });
+      throw error;
+    }
   }
   return client;
 }
@@ -59,12 +104,12 @@ async function getEmailFromS3({ bucketName, objectKey }: EmailParams) {
 export async function POST(request: NextRequest) {
   try {
     // Only allow this route in development
-    if (process.env.NODE_ENV === 'production') {
-      return NextResponse.json(
-        { error: 'This route is only for development. Use the API Gateway endpoint in production.' },
-        { status: 404 }
-      );
-    }
+    // if (process.env.NODE_ENV === 'production') {
+    //   return NextResponse.json(
+    //     { error: 'This route is only for development. Use the API Gateway endpoint in production.' },
+    //     { status: 404 }
+    //   );
+    // }
 
     // Validate API key
     const apiKey = request.headers.get('x-api-key');
@@ -81,7 +126,15 @@ export async function POST(request: NextRequest) {
         keyLength: apiKey?.length,
         envKeyLength: process.env.EMAIL_PROCESSING_API_KEY?.length
       });
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: {
+          hasApiKey: !!apiKey,
+          hasEnvApiKey: !!process.env.EMAIL_PROCESSING_API_KEY,
+          keyLength: apiKey?.length,
+          envKeyLength: process.env.EMAIL_PROCESSING_API_KEY?.length
+        }
+      }, { status: 401 });
     }
 
     // Get authenticated client
@@ -301,14 +354,19 @@ export async function POST(request: NextRequest) {
         name: error?.name || 'Unknown',
         message: error?.message || 'Unknown error',
         stack: error?.stack || '',
-        details: error?.response?.errors || error?.errors || []
+        details: error?.response?.errors || error?.errors || [],
+        rawError: error
       }
     });
     return NextResponse.json(
       { 
         error: 'Failed to process email',
         details: error?.message,
-        name: error?.name
+        name: error?.name,
+        stack: error?.stack,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+        response: error?.response,
+        errors: error?.errors
       }, 
       { status: 500 }
     );
