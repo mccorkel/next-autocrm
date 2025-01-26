@@ -10,8 +10,13 @@ import {
   RestApi,
 } from "aws-cdk-lib/aws-apigateway";
 import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
-import { emailFunction } from "./functions/email-function/resource";
-// import { configureIAM } from './config/iam';
+import { defineFunction } from "@aws-amplify/backend";
+
+// Define the Lambda function for email processing API
+const emailProcessingFunction = defineFunction({
+  name: "email-processing-api",
+  entry: "app/api/email/route.ts"
+});
 
 export const backend = defineBackend({
   auth: {
@@ -27,7 +32,7 @@ export const backend = defineBackend({
     }
   },
   data,
-  emailFunction,
+  emailProcessingFunction
 });
 
 // Create API stack
@@ -49,7 +54,7 @@ const emailApi = new RestApi(apiStack, "EmailApi", {
 
 // Create Lambda integration
 const lambdaIntegration = new LambdaIntegration(
-  backend.emailFunction.resources.lambda
+  backend.emailProcessingFunction.resources.lambda
 );
 
 // Create email endpoint
