@@ -10,13 +10,7 @@ import {
   RestApi,
 } from "aws-cdk-lib/aws-apigateway";
 import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
-import { defineFunction } from "@aws-amplify/backend";
-
-// Define the Lambda function for email processing API
-const emailProcessingFunction = defineFunction({
-  name: "email-processing-api",
-  entry: "app/api/email/route.ts"
-});
+import { emailProcessingFunction } from './functions/email-processing-api/resource';
 
 export const backend = defineBackend({
   auth: {
