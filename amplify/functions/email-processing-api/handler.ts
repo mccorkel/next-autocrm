@@ -4,6 +4,7 @@ import type { Schema } from "../../data/resource";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { simpleParser } from 'mailparser';
 import { Readable } from 'stream';
+import outputs from '../../../amplify_outputs.json';
 
 interface EmailParams {
   bucketName: string;
@@ -12,8 +13,8 @@ interface EmailParams {
 
 const s3Client = new S3Client({ region: 'us-west-2' });
 
-// Initialize client after authentication
-let client: ReturnType<typeof generateClient<Schema>> | null = null;
+// Configure Amplify with outputs
+Amplify.configure(outputs);
 
 async function getEmailFromS3({ bucketName, objectKey }: EmailParams) {
   const command = new GetObjectCommand({
@@ -43,8 +44,8 @@ export const handler = async (event: any) => {
   console.log('Received request:', JSON.stringify(event, null, 2));
 
   try {
-    // Initialize Amplify client
-    client = generateClient<Schema>();
+    // Initialize client for this request
+    const client = generateClient<Schema>();
 
     // Parse the request body
     const body = JSON.parse(event.body || '{}');
