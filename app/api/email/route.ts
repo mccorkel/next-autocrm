@@ -22,15 +22,28 @@ let client: ReturnType<typeof generateClient<Schema>> | null = null;
 async function getAuthenticatedClient() {
   if (!client) {
     try {
+      // Log all relevant environment variables
+      logEmailAPI('INFO', 'Environment variables check', {
+        SERVICE_ACCOUNT_EMAIL: process.env.SERVICE_ACCOUNT_EMAIL || 'not set',
+        SERVICE_ACCOUNT_PASSWORD: process.env.SERVICE_ACCOUNT_PASSWORD ? 'set' : 'not set',
+        USER_POOL_ID: process.env.NEXT_PUBLIC_AWS_USER_POOL_ID || 'not set',
+        AWS_REGION: process.env.NEXT_PUBLIC_AWS_REGION || 'not set',
+        NODE_ENV: process.env.NODE_ENV || 'not set'
+      });
+
+      if (!process.env.SERVICE_ACCOUNT_EMAIL || !process.env.SERVICE_ACCOUNT_PASSWORD) {
+        throw new Error('Service account credentials not found in environment variables');
+      }
+      
       logEmailAPI('INFO', 'Attempting service account sign in', {
-        hasEmail: !!process.env.SERVICE_ACCOUNT_EMAIL,
+        email: process.env.SERVICE_ACCOUNT_EMAIL,
         hasPassword: !!process.env.SERVICE_ACCOUNT_PASSWORD
       });
       
       // Authenticate with service account credentials
       const signInResult = await signIn({
-        username: process.env.SERVICE_ACCOUNT_EMAIL || '',
-        password: process.env.SERVICE_ACCOUNT_PASSWORD || ''
+        username: process.env.SERVICE_ACCOUNT_EMAIL,
+        password: process.env.SERVICE_ACCOUNT_PASSWORD
       });
       
       logEmailAPI('INFO', 'Service account sign in result', {
@@ -54,6 +67,11 @@ async function getAuthenticatedClient() {
           message: error?.message,
           stack: error?.stack,
           details: error?.response?.errors || error?.errors || []
+        },
+        envVars: {
+          hasEmail: !!process.env.SERVICE_ACCOUNT_EMAIL,
+          hasPassword: !!process.env.SERVICE_ACCOUNT_PASSWORD,
+          email: process.env.SERVICE_ACCOUNT_EMAIL || 'not set'
         }
       });
       throw error;
