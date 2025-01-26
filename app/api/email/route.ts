@@ -14,21 +14,6 @@ interface EmailParams {
   objectKey: string;
 }
 
-try {
-  Amplify.configure(outputs);
-} catch (error: any) {
-  logEmailAPI('ERROR', 'Failed to configure Amplify', {
-    error: {
-      name: error?.name,
-      message: error?.message,
-      stack: error?.stack,
-      details: error?.response?.errors || error?.errors || []
-    },
-    outputs: JSON.stringify(outputs)
-  });
-  throw error;
-}
-
 const s3Client = new S3Client({ region: 'us-west-2' });
 
 // Initialize client after authentication
@@ -103,6 +88,24 @@ async function getEmailFromS3({ bucketName, objectKey }: EmailParams) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Configure Amplify at the start of each request
+    logEmailAPI('INFO', 'Configuring Amplify', { hasOutputs: !!outputs });
+    try {
+      Amplify.configure(outputs);
+      logEmailAPI('INFO', 'Amplify configured successfully');
+    } catch (configError: any) {
+      logEmailAPI('ERROR', 'Failed to configure Amplify', {
+        error: {
+          name: configError?.name,
+          message: configError?.message,
+          stack: configError?.stack,
+          details: configError?.response?.errors || configError?.errors || []
+        },
+        outputs: JSON.stringify(outputs)
+      });
+      throw configError;
+    }
+
     // Only allow this route in development
     // if (process.env.NODE_ENV === 'production') {
     //   return NextResponse.json(
@@ -115,24 +118,24 @@ export async function POST(request: NextRequest) {
     const apiKey = request.headers.get('x-api-key');
     logEmailAPI('INFO', 'API Key validation', { 
       hasApiKey: !!apiKey,
-      hasEnvApiKey: !!process.env.EMAIL_PROCESSING_API_KEY,
+      hasOutputsApiKey: !!outputs.data.api_key,
       headerNames: Array.from(request.headers.keys())
     });
     
-    if (!apiKey || apiKey !== process.env.EMAIL_PROCESSING_API_KEY) {
+    if (!apiKey || apiKey !== outputs.data.api_key) {
       logEmailAPI('ERROR', 'Invalid or missing API key', {
         hasApiKey: !!apiKey,
-        hasEnvApiKey: !!process.env.EMAIL_PROCESSING_API_KEY,
+        hasOutputsApiKey: !!outputs.data.api_key,
         keyLength: apiKey?.length,
-        envKeyLength: process.env.EMAIL_PROCESSING_API_KEY?.length
+        outputsKeyLength: outputs.data.api_key?.length
       });
       return NextResponse.json({ 
         error: 'Unauthorized',
         details: {
           hasApiKey: !!apiKey,
-          hasEnvApiKey: !!process.env.EMAIL_PROCESSING_API_KEY,
+          hasOutputsApiKey: !!outputs.data.api_key,
           keyLength: apiKey?.length,
-          envKeyLength: process.env.EMAIL_PROCESSING_API_KEY?.length
+          outputsKeyLength: outputs.data.api_key?.length
         }
       }, { status: 401 });
     }
