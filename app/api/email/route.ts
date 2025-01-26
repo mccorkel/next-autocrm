@@ -58,10 +58,29 @@ async function getEmailFromS3({ bucketName, objectKey }: EmailParams) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Only allow this route in development
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'This route is only for development. Use the API Gateway endpoint in production.' },
+        { status: 404 }
+      );
+    }
+
     // Validate API key
     const apiKey = request.headers.get('x-api-key');
+    logEmailAPI('INFO', 'API Key validation', { 
+      hasApiKey: !!apiKey,
+      hasEnvApiKey: !!process.env.EMAIL_PROCESSING_API_KEY,
+      headerNames: Array.from(request.headers.keys())
+    });
+    
     if (!apiKey || apiKey !== process.env.EMAIL_PROCESSING_API_KEY) {
-      logEmailAPI('ERROR', 'Invalid or missing API key');
+      logEmailAPI('ERROR', 'Invalid or missing API key', {
+        hasApiKey: !!apiKey,
+        hasEnvApiKey: !!process.env.EMAIL_PROCESSING_API_KEY,
+        keyLength: apiKey?.length,
+        envKeyLength: process.env.EMAIL_PROCESSING_API_KEY?.length
+      });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
