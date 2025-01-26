@@ -6,67 +6,54 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { simpleParser } from 'mailparser';
 import { logEmailAPI } from '@/app/utils/logger';
 import outputs from '@/amplify_outputs.json';
+import { signIn } from '@aws-amplify/auth';
+import { Readable } from 'stream';
 
-// Configure Amplify with API key
-const apiConfig = {
-  ...outputs,
-  API: {
-    GraphQL: {
-      apiKey: process.env.EMAIL_PROCESSING_API_KEY,
-      endpoint: outputs.data.url,
-      region: process.env.NEXT_PUBLIC_AWS_REGION,
-      authenticationType: 'API_KEY'
-    }
-  }
-};
+interface EmailParams {
+  bucketName: string;
+  objectKey: string;
+}
 
-Amplify.configure(apiConfig);
-
-// Create client with API key auth
-const client = generateClient<Schema>({
-  authMode: "apiKey"
-});
+Amplify.configure(outputs);
 const s3Client = new S3Client({ region: 'us-west-2' });
 
-async function getEmailFromS3(messageId: string) {
-  try {
-    logEmailAPI('INFO', `Starting S3 retrieval`, { messageId, bucket: 'tigerpandatv-mail' });
-    
-    const command = new GetObjectCommand({
-      Bucket: 'tigerpandatv-mail',
-      Key: messageId
+// Initialize client after authentication
+let client: ReturnType<typeof generateClient<Schema>> | null = null;
+
+async function getAuthenticatedClient() {
+  if (!client) {
+    // Authenticate with service account credentials
+    await signIn({
+      username: process.env.SERVICE_ACCOUNT_EMAIL || '',
+      password: process.env.SERVICE_ACCOUNT_PASSWORD || ''
     });
-    
-    logEmailAPI('INFO', `Sending S3 request`, { messageId });
-    const response = await s3Client.send(command);
-    logEmailAPI('INFO', `Received S3 response`, { messageId, statusCode: response.$metadata.httpStatusCode });
-    
-    const emailContent = await response.Body?.transformToString();
-    if (!emailContent) {
-      logEmailAPI('ERROR', 'No email content in S3 response', { messageId });
-      throw new Error('No email content found');
-    }
-    logEmailAPI('INFO', `Retrieved raw email content`, { messageId, contentLength: emailContent.length });
-    
-    logEmailAPI('INFO', `Starting email parsing`, { messageId });
-    const parsedEmail = await simpleParser(emailContent);
-    logEmailAPI('INFO', `Successfully parsed email`, { 
-      messageId,
-      hasText: !!parsedEmail.text,
-      hasHtml: !!parsedEmail.html,
-      attachments: parsedEmail.attachments.length
-    });
-    
-    return parsedEmail.text || parsedEmail.html || '';
-  } catch (error: any) {
-    logEmailAPI('ERROR', 'Error retrieving email from S3', { 
-      messageId, 
-      errorName: error?.name || 'Unknown',
-      errorMessage: error?.message || 'Unknown error',
-      stack: error?.stack || ''
-    });
-    throw error;
+    client = generateClient<Schema>();
   }
+  return client;
+}
+
+async function getEmailFromS3({ bucketName, objectKey }: EmailParams) {
+  const command = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: objectKey
+  });
+
+  const response = await s3Client.send(command);
+  
+  if (!response.Body) {
+    throw new Error('No content found');
+  }
+
+  const streamToString = (stream: Readable): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const chunks: any[] = [];
+      stream.on('data', (chunk) => chunks.push(chunk));
+      stream.on('error', reject);
+      stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    });
+  };
+
+  return await streamToString(response.Body as Readable);
 }
 
 export async function POST(request: NextRequest) {
@@ -78,6 +65,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get authenticated client
+    const client = await getAuthenticatedClient();
+
     const body = await request.json();
     logEmailAPI('INFO', 'Received email processing request', { body });
     
@@ -87,19 +77,45 @@ export async function POST(request: NextRequest) {
     
     // Get email content from S3
     logEmailAPI('INFO', 'Starting email content retrieval', { messageId });
-    const content = await getEmailFromS3(messageId);
-    logEmailAPI('INFO', 'Retrieved email content', { messageId, contentLength: content.length });
+    const rawContent = await getEmailFromS3({ bucketName: 'tigerpandatv-mail', objectKey: messageId });
+    const parsedEmail = await simpleParser(rawContent);
+    logEmailAPI('INFO', 'Retrieved and parsed email content', { 
+      messageId, 
+      contentLength: rawContent.length,
+      subject: parsedEmail.subject,
+      from: parsedEmail.from?.text,
+      date: parsedEmail.date
+    });
 
     // Find or create customer
-    logEmailAPI('INFO', 'Starting customer lookup', { source });
+    const formattedEmail = source.trim().toLowerCase();
+    
+    // // First test - fetch all customers
+    // logEmailAPI('INFO', 'Fetching all customers to verify data access');
+    // const allCustomersResponse = await client.models.Customer.list({});
+    // logEmailAPI('INFO', 'All customers response', {
+    //   totalCustomers: allCustomersResponse.data?.length || 0,
+    //   hasData: !!allCustomersResponse.data,
+    //   customers: allCustomersResponse.data
+    // });
+
+    // Now try specific email lookup
+    logEmailAPI('INFO', 'Starting customer lookup', { 
+      source,
+      formattedEmail,
+      query: { email: { eq: formattedEmail } }
+    });
+    
     let customer = null;
     const customerResponse = await client.models.Customer.list({
-      filter: { email: { eq: source } }
+      filter: { email: { eq: formattedEmail } }
     });
     logEmailAPI('INFO', 'Customer lookup response', { 
       source, 
+      formattedEmail,
       found: customerResponse.data?.length > 0,
-      count: customerResponse.data?.length 
+      count: customerResponse.data?.length,
+      data: customerResponse.data
     });
 
     if (customerResponse.data && customerResponse.data.length > 0) {
@@ -110,25 +126,49 @@ export async function POST(request: NextRequest) {
         customerEmail: customer?.email
       });
     } else {
-      logEmailAPI('INFO', 'Creating new customer', { source });
-      const createResponse = await client.models.Customer.create({
-        email: source,
-        name: source.split('@')[0] // Use email prefix as name
-      });
-      customer = createResponse.data;
-      logEmailAPI('INFO', 'Created new customer', { 
-        customerId: customer?.id,
-        customerName: customer?.name,
-        customerEmail: customer?.email
-      });
+      logEmailAPI('INFO', 'Creating new customer', { formattedEmail });
+      try {
+        const createResponse = await client.models.Customer.create({
+          email: formattedEmail,
+          name: formattedEmail.split('@')[0] // Use email prefix as name
+        });
+        
+        logEmailAPI('INFO', 'Customer create response', { 
+          response: createResponse,
+          data: createResponse.data,
+          errors: createResponse.errors
+        });
+        
+        if (!createResponse.data) {
+          throw new Error('Customer creation returned no data');
+        }
+        
+        customer = createResponse.data;
+        logEmailAPI('INFO', 'Created new customer', { 
+          customerId: customer?.id,
+          customerName: customer?.name,
+          customerEmail: customer?.email
+        });
+      } catch (error: any) {
+        logEmailAPI('ERROR', 'Failed to create customer', {
+          formattedEmail,
+          errorName: error?.name,
+          errorMessage: error?.message,
+          errorDetails: error?.response?.errors || error?.errors,
+          stack: error?.stack
+        });
+        throw error;
+      }
     }
 
     if (!customer || !customer.id) {
       const error = 'Failed to find or create customer';
       logEmailAPI('ERROR', error, { 
         source,
+        formattedEmail,
         customerResponse: customerResponse.data,
-        customer
+        customer,
+        createError: customer === null ? 'Customer creation failed' : undefined
       });
       throw new Error(error);
     }
@@ -173,7 +213,7 @@ export async function POST(request: NextRequest) {
       const createResponse = await client.models.Ticket.create({
         customerId: customer.id,
         title: subject || 'Email from customer',
-        description: content,
+        description: "<AI summary coming soon>",
         status: 'OPEN',
         priority: 'MEDIUM',
         category: 'SUPPORT',
@@ -202,12 +242,15 @@ export async function POST(request: NextRequest) {
     // Add email activity to ticket
     logEmailAPI('INFO', 'Creating email activity', { 
       ticketId: ticket.id,
-      contentLength: content.length
+      contentLength: parsedEmail.text?.length || 0
     });
+    
+    const emailActivityContent = `**Incoming Email**\n\nFrom: ${source}\nSubject: ${subject}\nDate: ${parsedEmail.date ? parsedEmail.date.toLocaleString() : new Date().toLocaleString()}\n\n---\n\n${parsedEmail.text || '(No content)'}`;
+    
     const activityResponse = await client.models.TicketActivity.create({
       ticketId: ticket.id,
       type: 'EMAIL_RECEIVED',
-      content: content,
+      content: emailActivityContent,
       agentId: 'SYSTEM',
       createdAt: new Date().toISOString()
     });
@@ -251,4 +294,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
+
+export { getEmailFromS3 };

@@ -22,6 +22,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useAgent } from "@/app/contexts/AgentContext";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { Suspense } from "react";
+import ReactMarkdown from 'react-markdown';
+import styles from '@/app/styles/markdown.module.css';
 
 const client = generateClient<Schema>();
 
@@ -29,7 +31,7 @@ type BadgeVariation = "info" | "warning" | "error" | "success";
 type TicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "BLOCKED" | "CLOSED";
 type TicketCategory = "ACCOUNT" | "BILLING" | "SUPPORT" | "SALES" | "OTHER";
-type ActivityType = "NOTE" | "STATUS_CHANGE" | "PRIORITY_CHANGE" | "ASSIGNMENT_CHANGE";
+type ActivityType = "NOTE" | "STATUS_CHANGE" | "PRIORITY_CHANGE" | "ASSIGNMENT_CHANGE" | "EMAIL_RECEIVED" | "EMAIL_SENT";
 type TicketActivity = NonNullable<Schema["TicketActivity"]["type"]>;
 
 function getPriorityColor(priority: string | null | undefined): BadgeVariation {
@@ -369,6 +371,10 @@ function TicketDetailsContent() {
         return '⚡';
       case 'ASSIGNMENT_CHANGE':
         return '👤';
+      case 'EMAIL_RECEIVED':
+        return '📨';
+      case 'EMAIL_SENT':
+        return '📤';
       default:
         return '•';
     }
@@ -466,9 +472,11 @@ function TicketDetailsContent() {
                         )}
                         <Text color={tokens.colors.font.tertiary}>
                           {new Date(activity.createdAt || "").toLocaleString()}
-              </Text>
+                        </Text>
                       </Flex>
-                      <Text>{activity.content}</Text>
+                      <ReactMarkdown className={styles['markdown-content']}>
+                        {activity.content}
+                      </ReactMarkdown>
                       {(activity.type === 'PRIORITY_CHANGE' || activity.type === 'STATUS_CHANGE') && (
                         <Flex gap={tokens.space.xs} alignItems="center" marginTop={tokens.space.xxs}>
                           <Badge variation="info">{activity.oldValue}</Badge>
