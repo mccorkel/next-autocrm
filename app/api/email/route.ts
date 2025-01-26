@@ -296,4 +296,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export { getEmailFromS3 };
+//export { getEmailFromS3 };
