@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Amplify } from 'aws-amplify';
 import { generateClient } from "aws-amplify/data";
+import {jwtDecode} from 'jwt-decode';
+import outputs from '@/amplify_outputs.json';
 import type { Schema } from "@/amplify/data/resource";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { fromEnv } from "@aws-sdk/credential-providers";
 import { simpleParser } from 'mailparser';
 import { logEmailAPI } from '@/app/utils/logger';
-import outputs from '@/amplify_outputs.json';
 import { signIn } from '@aws-amplify/auth';
 import { Readable } from 'stream';
 
@@ -14,7 +16,10 @@ interface EmailParams {
   objectKey: string;
 }
 
-const s3Client = new S3Client({ region: 'us-west-2' });
+// Initialize S3 client - in Lambda, it will use the execution role
+const s3Client = new S3Client({ 
+  region: process.env.AWS_REGION || 'us-west-2'
+});
 
 // Initialize client after authentication
 let client: ReturnType<typeof generateClient<Schema>> | null = null;
@@ -124,16 +129,52 @@ export async function POST(request: NextRequest) {
       throw configError;
     }
 
-    // Only allow this route in development
-    // if (process.env.NODE_ENV === 'production') {
-    //   return NextResponse.json(
-    //     { error: 'This route is only for development. Use the API Gateway endpoint in production.' },
-    //     { status: 404 }
-    //   );
-    // }
-
-    // Validate API key
+    // Validate user pool token
+    const authHeader = request.headers.get('Authorization');
+    let isAuthenticated = false;
     const apiKey = request.headers.get('x-api-key');
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const decodedToken: any = jwtDecode(token);
+        if (decodedToken?.exp * 1000 > Date.now()) {
+          isAuthenticated = true;
+          logEmailAPI('INFO', 'User pool authentication succeeded', {
+            sub: decodedToken.sub,
+            email: decodedToken.email,
+          });
+        }
+      } catch (error: any) {
+        logEmailAPI('ERROR', 'User pool authentication failed', {
+          error: error.message,
+        });
+      }
+    }
+
+    // If not authenticated with user pool, fallback to API key authentication
+    if (!isAuthenticated) {
+      logEmailAPI('INFO', 'API Key validation', {
+        hasApiKey: !!apiKey,
+        hasOutputsApiKey: !!outputs.data.api_key,
+      });
+
+      if (!apiKey || apiKey !== outputs.data.api_key) {
+        logEmailAPI('ERROR', 'Unauthorized access: Invalid API key', {
+          providedApiKey: apiKey,
+          expectedApiKey: outputs.data.api_key,
+        });
+        return NextResponse.json({
+          error: 'Unauthorized',
+          details: {
+            hasApiKey: !!apiKey,
+            keyLength: apiKey?.length,
+          }
+        }, { status: 401 });
+      }
+    }
+
+    logEmailAPI('INFO', 'Authentication successful');
     logEmailAPI('INFO', 'API Key validation', { 
       hasApiKey: !!apiKey,
       hasOutputsApiKey: !!outputs.data.api_key,
