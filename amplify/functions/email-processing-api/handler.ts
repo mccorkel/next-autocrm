@@ -4,7 +4,6 @@ import type { Schema } from "../../data/resource";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { simpleParser } from 'mailparser';
 import { Readable } from 'stream';
-import outputs from '../../../amplify_outputs.json';
 
 interface EmailParams {
   bucketName: string;
@@ -13,8 +12,17 @@ interface EmailParams {
 
 const s3Client = new S3Client({ region: 'us-west-2' });
 
-// Configure Amplify with outputs
-Amplify.configure(outputs);
+// Configure Amplify with environment variables
+Amplify.configure({
+  API: {
+    GraphQL: {
+      endpoint: process.env.GRAPHQL_URL as string,
+      region: process.env.AWS_REGION as string,
+      defaultAuthMode: 'apiKey',
+      apiKey: process.env.GRAPHQL_API_KEY as string
+    }
+  }
+});
 
 async function getEmailFromS3({ bucketName, objectKey }: EmailParams) {
   const command = new GetObjectCommand({
