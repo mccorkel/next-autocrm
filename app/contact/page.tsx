@@ -4,6 +4,7 @@ import { useState } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {
+  Alert,
   Button,
   Card,
   Flex,
@@ -28,6 +29,7 @@ function ContactContent() {
   const { tokens } = useTheme();
   const { translations } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -41,16 +43,61 @@ function ContactContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
 
     try {
-      await client.models.Ticket.create({
-        ...formData,
-        status: "OPEN",
+      // First, create or find the customer
+      const formattedEmail = formData.email.trim().toLowerCase();
+      const customerResponse = await client.models.Customer.list({
+        filter: { email: { eq: formattedEmail } }
+      });
+
+      let customer;
+      if (customerResponse.data && customerResponse.data.length > 0) {
+        customer = customerResponse.data[0];
+      } else {
+        const createResponse = await client.models.Customer.create({
+          email: formattedEmail,
+          name: formData.name,
+          company: formData.company || undefined,
+          phone: formData.phone || undefined
+        });
+        if (!createResponse.data) {
+          throw new Error('Failed to create customer account');
+        }
+        customer = createResponse.data;
+      }
+
+      // Then create the ticket
+      const ticketResponse = await client.models.Ticket.create({
+        customerId: customer.id,
+        title: formData.subject,
+        description: formData.message,
+        status: 'OPEN',
+        priority: 'MEDIUM',
+        category: formData.category,
+        createdAt: new Date().toISOString()
+      });
+
+      if (!ticketResponse.data) {
+        throw new Error('Failed to create support ticket');
+      }
+
+      // Add initial activity
+      await client.models.TicketActivity.create({
+        ticketId: ticketResponse.data.id,
+        type: 'STATUS_CHANGE',
+        content: 'Ticket created via contact form',
+        agentId: 'SYSTEM',
+        createdAt: new Date().toISOString(),
+        oldValue: 'Created',
+        newValue: 'OPEN'
       });
 
       router.push("/contact/success");
-    } catch (error) {
-      console.error("Error creating ticket:", error);
+    } catch (error: any) {
+      console.error("Error submitting form:", error);
+      setError(error.message || 'An unexpected error occurred. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -61,6 +108,8 @@ function ContactContent() {
       ...prev,
       [name]: value
     }));
+    // Clear error when user starts typing
+    if (error) setError(null);
   };
 
   return (
@@ -75,6 +124,18 @@ function ContactContent() {
             <Heading level={1}>{translations.contact.title}</Heading>
             <Text>{translations.contact.form.description}</Text>
 
+            {error && (
+              <Alert
+                variation="error"
+                isDismissible={true}
+                hasIcon={true}
+                heading="Error"
+                onDismiss={() => setError(null)}
+              >
+                {error}
+              </Alert>
+            )}
+
             <Heading level={3}>{translations.contact.form.customerInfo}</Heading>
             <TextField
               label={translations.contact.form.name}
@@ -82,6 +143,8 @@ function ContactContent() {
               value={formData.name}
               onChange={handleChange}
               required
+              isDisabled={isSubmitting}
+              placeholder="Enter your full name"
             />
             <TextField
               label={translations.contact.form.email}
@@ -90,12 +153,16 @@ function ContactContent() {
               value={formData.email}
               onChange={handleChange}
               required
+              isDisabled={isSubmitting}
+              placeholder="Enter your email address"
             />
             <TextField
               label={translations.contact.form.company}
               name="company"
               value={formData.company}
               onChange={handleChange}
+              isDisabled={isSubmitting}
+              placeholder="Enter your company name (optional)"
             />
             <TextField
               label={translations.contact.form.phone}
@@ -103,6 +170,8 @@ function ContactContent() {
               type="tel"
               value={formData.phone}
               onChange={handleChange}
+              isDisabled={isSubmitting}
+              placeholder="Enter your phone number (optional)"
             />
 
             <Heading level={3}>{translations.contact.form.issueDetails}</Heading>
@@ -112,6 +181,7 @@ function ContactContent() {
               value={formData.category}
               onChange={handleChange}
               required
+              isDisabled={isSubmitting}
             >
               <option value="SUPPORT">{translations.contact.form.categories.support}</option>
               <option value="BILLING">{translations.contact.form.categories.billing}</option>
@@ -125,6 +195,8 @@ function ContactContent() {
               value={formData.subject}
               onChange={handleChange}
               required
+              isDisabled={isSubmitting}
+              placeholder="Enter the subject of your message"
             />
             <TextAreaField
               label={translations.contact.form.message}
@@ -132,11 +204,19 @@ function ContactContent() {
               value={formData.message}
               onChange={handleChange}
               required
+              isDisabled={isSubmitting}
               rows={5}
+              placeholder="Enter your message"
             />
 
-            <Button type="submit" variation="primary" isLoading={isSubmitting}>
-              {isSubmitting ? translations.contact.form.submitting : translations.contact.form.submit}
+            <Button 
+              type="submit" 
+              variation="primary" 
+              isLoading={isSubmitting}
+              loadingText={translations.contact.form.submitting}
+              isDisabled={isSubmitting}
+            >
+              {translations.contact.form.submit}
             </Button>
           </Flex>
         </form>
