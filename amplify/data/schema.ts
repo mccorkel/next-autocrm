@@ -19,7 +19,9 @@ const schema = a.schema({
     emailThreadId: a.string(),
     lastEmailReceivedAt: a.datetime(),
     notificationPreferences: a.hasOne('NotificationPreference', ['ticketId']),
-  }).authorization(allow => allow.authenticated()),
+  }).authorization(allow => [
+      allow.authenticated(),
+      allow.publicApiKey()]),
 
   NotificationPreference: a.model({
     id: a.id(),
@@ -35,7 +37,9 @@ const schema = a.schema({
     notifyOnAssignmentChange: a.boolean(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
-  }).authorization(allow => allow.authenticated()),
+  }).authorization(allow => [
+    allow.authenticated(),
+    allow.publicApiKey()]),
 
   TicketActivity: a.model({
     id: a.id(),
@@ -49,7 +53,9 @@ const schema = a.schema({
     createdAt: a.datetime(),
     ticket: a.belongsTo('Ticket', ['ticketId']),
     agent: a.belongsTo('Agent', ['agentId']),
-  }).authorization(allow => allow.authenticated()),
+  }).authorization(allow => [
+    allow.authenticated(),
+    allow.publicApiKey()]),
 
   Agent: a.model({
     id: a.id(),
@@ -63,7 +69,9 @@ const schema = a.schema({
     supervisorId: a.string(),
     supervisor: a.belongsTo('Agent', ['supervisorId']),
     agents: a.hasMany('Agent', ['supervisorId']),
-  }).authorization(allow => allow.authenticated()),
+  }).authorization(allow => [
+    allow.authenticated(),
+    allow.publicApiKey()]),
 
   Comment: a.model({
     id: a.id(),
@@ -72,7 +80,9 @@ const schema = a.schema({
     ticketId: a.string(),
     createdAt: a.datetime(),
     ticket: a.belongsTo('Ticket', ['ticketId'])
-  }).authorization(allow => allow.authenticated()),
+  }).authorization(allow => [
+    allow.authenticated(),
+    allow.publicApiKey()]),
 
   Customer: a.model({
     id: a.id(),
@@ -81,7 +91,9 @@ const schema = a.schema({
     phone: a.string(),
     company: a.string(),
     tickets: a.hasMany('Ticket', ['customerId'])
-  }).authorization(allow => allow.authenticated()),
+  }).authorization(allow => [
+    allow.authenticated(),
+    allow.publicApiKey()]),
 });
 
 export default schema;

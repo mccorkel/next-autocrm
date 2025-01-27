@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Amplify } from 'aws-amplify';
 import { generateClient } from "aws-amplify/data";
-import {jwtDecode} from 'jwt-decode';
+import { fetchAuthSession } from '@aws-amplify/auth';
+import { jwtDecode } from 'jwt-decode';
 import outputs from '@/amplify_outputs.json';
 import type { Schema } from "@/amplify/data/resource";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { fromEnv } from "@aws-sdk/credential-providers";
 import { simpleParser } from 'mailparser';
 import { logEmailAPI } from '@/app/utils/logger';
 import { signIn } from '@aws-amplify/auth';
@@ -15,11 +15,6 @@ interface EmailParams {
   bucketName: string;
   objectKey: string;
 }
-
-// Initialize S3 client - in Lambda, it will use the execution role
-const s3Client = new S3Client({ 
-  region: process.env.AWS_REGION || 'us-west-2'
-});
 
 // Initialize client after authentication
 let client: ReturnType<typeof generateClient<Schema>> | null = null;
@@ -85,28 +80,60 @@ async function getAuthenticatedClient() {
   return client;
 }
 
-async function getEmailFromS3({ bucketName, objectKey }: EmailParams) {
-  const command = new GetObjectCommand({
-    Bucket: bucketName,
-    Key: objectKey
-  });
-
-  const response = await s3Client.send(command);
-  
-  if (!response.Body) {
-    throw new Error('No content found');
+// Get AWS credentials from auth session
+async function getS3Credentials() {
+  try {
+    const session = await fetchAuthSession();
+    if (!session.credentials) {
+      throw new Error('No credentials in auth session');
+    }
+    return session.credentials;
+  } catch (error) {
+    logEmailAPI('ERROR', 'Failed to get AWS credentials', { error });
+    throw error;
   }
+}
 
-  const streamToString = (stream: Readable): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const chunks: any[] = [];
-      stream.on('data', (chunk) => chunks.push(chunk));
-      stream.on('error', reject);
-      stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+async function getEmailFromS3({ bucketName, objectKey }: EmailParams) {
+  try {
+    // Get credentials from auth session
+    const credentials = await getS3Credentials();
+    
+    // Create a new client with the credentials for this request
+    const authenticatedClient = new S3Client({
+      region: outputs.data.aws_region || 'us-west-2',
+      credentials: {
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey,
+        sessionToken: credentials.sessionToken
+      }
     });
-  };
 
-  return await streamToString(response.Body as Readable);
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: objectKey
+    });
+
+    const response = await authenticatedClient.send(command);
+    
+    if (!response.Body) {
+      throw new Error('No content found');
+    }
+
+    const streamToString = (stream: Readable): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const chunks: any[] = [];
+        stream.on('data', (chunk) => chunks.push(chunk));
+        stream.on('error', reject);
+        stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+      });
+    };
+
+    return await streamToString(response.Body as Readable);
+  } catch (error) {
+    logEmailAPI('ERROR', 'Failed to get email from S3', { error });
+    throw error;
+  }
 }
 
 export async function POST(request: NextRequest) {
