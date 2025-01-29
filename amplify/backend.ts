@@ -12,6 +12,8 @@ import {
 import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { emailProcessingFunction } from './functions/email-processing-api/resource';
 
+import { langchainFunction } from './functions/langchain-lambda/resource';
+
 export const backend = defineBackend({
   auth: {
     ...auth,
@@ -26,7 +28,8 @@ export const backend = defineBackend({
     }
   },
   data,
-  emailProcessingFunction
+  emailProcessingFunction,
+  langchainFunction
 });
 
 // Create API stack
