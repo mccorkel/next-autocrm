@@ -1,0 +1,36 @@
+{
+  "info": {
+    "name": "Next.js AutoCRM API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "LangChain",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"prompt\": \"Explain the benefits of using a Next.js + Amplify stack\"\n}"
+        },
+        "url": {
+          "raw": "{{BASE_URL}}/api/langchain",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "langchain"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "https://dthhv2mwt2r0l.cloudfront.net",
+      "type": "string"
+    }
+  ]
+} 
