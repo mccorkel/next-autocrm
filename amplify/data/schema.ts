@@ -53,6 +53,7 @@ const schema = a.schema({
     createdAt: a.datetime(),
     ticket: a.belongsTo('Ticket', ['ticketId']),
     agent: a.belongsTo('Agent', ['agentId']),
+    incomingEmail: a.hasOne('IncomingEmail', ['ticketActivityId']),
   }).authorization(allow => [
     allow.authenticated(),
     allow.publicApiKey()]),
@@ -90,7 +91,43 @@ const schema = a.schema({
     email: a.string(),
     phone: a.string(),
     company: a.string(),
-    tickets: a.hasMany('Ticket', ['customerId'])
+    tickets: a.hasMany('Ticket', ['customerId']),
+    emails: a.hasMany('IncomingEmail', ['fromAddress']),
+  }).authorization(allow => [
+    allow.authenticated(),
+    allow.publicApiKey()]),
+
+  EmailCategorization: a.model({
+    id: a.id(),
+    incomingEmailId: a.string(),
+    subject: a.string(),
+    category: a.enum(['ACCOUNT', 'BILLING', 'SUPPORT', 'SALES', 'OTHER']),
+    language: a.enum(['EN', 'DE', 'ES', 'FR', 'JA']),
+    confidence: a.float(),
+    createdAt: a.datetime(),
+    email: a.belongsTo('IncomingEmail', ['incomingEmailId']),
+    isCategoryCorrect: a.boolean(),
+    isLanguageCorrect: a.boolean(),
+    feedbackSentToLLM: a.boolean(),
+    feedbackSentAt: a.datetime(),
+    llmSuggestion: a.string(),
+    llmSuggestionCategory: a.enum(['ACCOUNT', 'BILLING', 'SUPPORT', 'SALES', 'OTHER']),
+    llmSuggestionLanguage: a.enum(['EN', 'DE', 'ES', 'FR', 'JA']),
+  }).authorization(allow => [
+    allow.authenticated(),
+    allow.publicApiKey()]),
+
+  IncomingEmail: a.model({
+    id: a.id(),
+    fromAddress: a.string(),
+    toAddress: a.string(),
+    subject: a.string(),
+    body: a.string(),
+    createdAt: a.datetime(),
+    categorization: a.hasOne('EmailCategorization', ['incomingEmailId']),
+    customer: a.belongsTo('Customer', ['fromAddress']),
+    ticketActivityId: a.string(),
+    ticketActivity: a.belongsTo('TicketActivity', ['ticketActivityId']),
   }).authorization(allow => [
     allow.authenticated(),
     allow.publicApiKey()]),

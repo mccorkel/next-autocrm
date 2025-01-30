@@ -1,0 +1,284 @@
+{
+  "info": {
+    "_postman_id": "b5f7d8e3-4c6a-4b5f-9e8d-123456789abc",
+    "name": "Email Categorization API Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Feedback API",
+      "item": [
+        {
+          "name": "Submit Valid Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categorizationId\": \"REPLACE_WITH_ACTUAL_ID\",\n  \"isCategoryCorrect\": false,\n  \"isLanguageCorrect\": true,\n  \"correctCategory\": \"SUPPORT\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/email-feedback",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-feedback"]
+            }
+          }
+        },
+        {
+          "name": "Submit Feedback with Invalid Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categorizationId\": \"REPLACE_WITH_ACTUAL_ID\",\n  \"isCategoryCorrect\": false,\n  \"isLanguageCorrect\": true,\n  \"correctCategory\": \"INVALID_CATEGORY\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/email-feedback",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-feedback"]
+            }
+          }
+        },
+        {
+          "name": "Submit Feedback with Missing Required Fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categorizationId\": \"REPLACE_WITH_ACTUAL_ID\",\n  \"isCategoryCorrect\": true\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/email-feedback",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-feedback"]
+            }
+          }
+        },
+        {
+          "name": "Submit Feedback with Invalid ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categorizationId\": \"non-existent-id\",\n  \"isCategoryCorrect\": true,\n  \"isLanguageCorrect\": true\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/email-feedback",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-feedback"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Suggestions API",
+      "item": [
+        {
+          "name": "Get All Suggestions (Default Limit)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/email-suggestions",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-suggestions"]
+            }
+          }
+        },
+        {
+          "name": "Get Suggestions with Limit",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/email-suggestions?limit=5",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-suggestions"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Category",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/email-suggestions?category=SUPPORT",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-suggestions"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "SUPPORT"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Language",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/email-suggestions?language=EN",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-suggestions"],
+              "query": [
+                {
+                  "key": "language",
+                  "value": "EN"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Suggestions with LLM Feedback",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/email-suggestions?hasLLMSuggestion=true",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-suggestions"],
+              "query": [
+                {
+                  "key": "hasLLMSuggestion",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Specific Categorization",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/email-suggestions?categorizationId=REPLACE_WITH_ACTUAL_ID",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-suggestions"],
+              "query": [
+                {
+                  "key": "categorizationId",
+                  "value": "REPLACE_WITH_ACTUAL_ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Combined Filters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/email-suggestions?category=SUPPORT&language=EN&limit=3",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-suggestions"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "SUPPORT"
+                },
+                {
+                  "key": "language",
+                  "value": "EN"
+                },
+                {
+                  "key": "limit",
+                  "value": "3"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Invalid Category",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/email-suggestions?category=INVALID",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-suggestions"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "INVALID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Invalid Limit",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/email-suggestions?limit=1000",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "email-suggestions"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1000"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+} 

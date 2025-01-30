@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { ChatOpenAI } from '@langchain/openai';
 import { StructuredOutputParser } from "langchain/output_parsers";
 import { z } from "zod";
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from '@/amplify/data/resource';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -69,9 +71,66 @@ Include a confidence score between 0 and 1 indicating how certain you are of the
     const response = await model.invoke(prompt);
     const parsed = await parser.parse(response.content.toString());
 
+    // Use Amplify Data client
+    const client = generateClient<Schema>();
+
+    // First, create or find the customer
+    const customerResponse = await client.models.Customer.list({
+      filter: { email: { eq: body.fromAddress } }
+    });
+
+    let customer;
+    if (customerResponse.data.length === 0) {
+      const newCustomerResponse = await client.models.Customer.create({
+        email: body.fromAddress,
+        name: body.fromAddress.split('@')[0], // Simple default name
+        phone: '',  // Required field
+        company: '', // Required field
+      });
+      if (!newCustomerResponse.data) {
+        throw new Error('Failed to create customer');
+      }
+      customer = newCustomerResponse.data;
+    } else {
+      customer = customerResponse.data[0];
+    }
+
+    // Create the incoming email linked to the customer
+    const incomingEmailResponse = await client.models.IncomingEmail.create({
+      fromAddress: body.fromAddress,
+      toAddress: body.toAddress,
+      subject: body.subject,
+      body: body.content,
+      createdAt: new Date().toISOString(),
+    });
+
+    if (!incomingEmailResponse.data) {
+      throw new Error('Failed to create incoming email');
+    }
+    const incomingEmail = incomingEmailResponse.data;
+
+    // Create the categorization linked to the email
+    const emailCategoryResponse = await client.models.EmailCategorization.create({
+      incomingEmailId: incomingEmail.id,
+      subject: body.subject,
+      category: parsed.category,
+      language: parsed.language,
+      confidence: parsed.confidence,
+      createdAt: new Date().toISOString(),
+    });
+
+    if (!emailCategoryResponse.data) {
+      throw new Error('Failed to create email categorization');
+    }
+    const emailCategory = emailCategoryResponse.data;
+
     return NextResponse.json({
       success: true,
-      data: parsed,
+      data: {
+        customer,
+        email: incomingEmail,
+        categorization: emailCategory,
+      },
     }, {
       headers: {
         'Content-Type': 'application/json',
